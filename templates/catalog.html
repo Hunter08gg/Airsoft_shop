@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block main %}
+    <h1>Каталог оружия</h1>
+
+    <form class="panel-filter" method="GET">
+        <label for="creater">Автор:</label>
+        <select name="creater" id="creater">
+            
+        </select>
+
+        <input type="submit" value="Найти">
+    </form>
+
+    <div class="wrap">
+        {% for weapon in weapon %}
+            <div class="card">
+                <h2 class="title-card">{{ weapon.title }}</h2>
+                <p class="desc-card">{{ weapon.desc }}</p>
+            </div>
+        {% endfor %}
+    </div>
+{% endblock main %}
+
+{% block scripts %}
+    <script src="/static/loadForm.js"></script>
+{% endblock scripts %}

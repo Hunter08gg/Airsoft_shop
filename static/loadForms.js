@@ -1,5 +1,5 @@
 async function loadCreaters() {
-    const res = await fetch("/products/all-creaters/")
+    const res = await fetch("/main/all-creaters/")
     const data = await res.json()
     data.forEach(creater => {
         const option = document.createElement("option")

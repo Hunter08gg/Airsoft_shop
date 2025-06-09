@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+
+{% block main %}
+    <h1>Личный кабинет</h1>
+
+    <h2>Логин: {{ user.username }}</h2>
+
+    <form action="{% url "logout" %}" method="post">
+        {% csrf_token %}
+        <input type="submit" value="Выйти из аккаунта">
+    </form>
+{% endblock main %}
