@@ -13,15 +13,15 @@
     </form>
 
     <div class="wrap">
-        {% for weapon in weapon %}
+        {% for weapon in weapons %}
             <div class="card">
-                <h2 class="title-card">{{ weapon.title }}</h2>
-                <p class="desc-card">{{ weapon.desc }}</p>
+                <h2 class="name-card">{{ weapon.name }}</h2>
+                <p class="description-card">{{ weapon.description }}</p>
             </div>
         {% endfor %}
     </div>
 {% endblock main %}
 
 {% block scripts %}
-    <script src="/static/loadForm.js"></script>
+    <script src="/static/loadForms.js"></script>
 {% endblock scripts %}
