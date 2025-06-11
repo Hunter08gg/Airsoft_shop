@@ -1,4 +1,6 @@
 from django.db import models
+from imagekit.models.fields import ImageSpecField
+from imagekit.processors import ResizeToFit
 
 class Creater(models.Model):
     name = models.CharField("Полное имя", max_length=80)
@@ -28,6 +30,7 @@ class Weapon(models.Model):
     price = models.FloatField("Цена")
     date_added = models.DateTimeField("Дата добавления", auto_now_add = True)
     cover = models.ImageField("Обложка", upload_to= "covers/", null = True, blank = True) # только картинки
+    cover_card = ImageSpecField([ResizeToFit(200, 200)], source= "cover", format= "PNG")
 
     def __str__(self):
         return self.name
@@ -144,6 +147,7 @@ class Accessory(models.Model):
     compatible_with = models.ManyToManyField(Weapon, blank=True, verbose_name="Совместимо с")
     date_added = models.DateTimeField("Дата добавления", auto_now_add=True)
     cover = models.ImageField("Обложка", upload_to= "covers/", null = True, blank = True)
+   
 
     def __str__(self):
         return self.name
