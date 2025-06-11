@@ -1,13 +1,89 @@
 {% extends "base.html" %}
 
 {% block main %}
-    <h1>Главная сайт "оружие на любой вкус"</h1>
+    <div class="banner">
+        <h1>Оружие на любой вкус</h1>
+        <p>Полный ассортимент страйкбольного оружия и снаряжения</p>
+    </div>
+
+    <div class="category-filter">
+        <button class="category-btn active" data-category="all">Все товары</button>
+        <button class="category-btn" data-category="weapon">Оружие</button>
+        <button class="category-btn" data-category="armor">Броня</button>
+        <button class="category-btn" data-category="accessory">Аксессуары</button>
+    </div>
+
     <div class="wrap">
-        {% for weapon in weapon %}
-            <div class="card">
-                <h2 class="title-card">{{ weapon.title }}</h2>
-                <p class="desc-card">{{ weapon.desc }}</p>
+        {% for item in items %}
+            <div class="card" data-category="{{ item.category }}">
+                {% if item.cover_card %}
+                    <img src="{{ item.cover_card.url }}" alt="{{ item.name }}" class="card-img">
+                {% else %}
+                    <div class="no-image">Нет изображения</div>
+                {% endif %}
+                
+                <div class="card-body">
+                    <h2 class="title-card">{{ item.name }}</h2>
+                    
+                    <div class="price">{{ item.price }} ₽</div>
+                    
+                    <div class="specs">
+                        {% if item.damage %}
+                            <div class="spec"><span>Урон:</span> {{ item.damage }}</div>
+                        {% endif %}
+                        {% if item.protection_level %}
+                            <div class="spec"><span>Защита:</span> {{ item.protection_level }}</div>
+                        {% endif %}
+                        {% if item.weight %}
+                            <div class="spec"><span>Вес:</span> {{ item.weight }} кг</div>
+                        {% endif %}
+                        {% if item.type %}
+                            <div class="spec"><span>Тип:</span> {{ item.type }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="desc-card">
+                        {{ item.description|truncatechars:150 }}
+                    </div>
+                    
+                    <div class="card-footer">
+                        <div class="date-added">
+                            Добавлено: {{ item.date_added|date:"d.m.Y" }}
+                        </div>
+                        <button class="btn">Подробнее</button>
+                    </div>
+                </div>
+            </div>
+        {% empty %}
+            <div class="no-items">
+                <p>Товары не найдены</p>
             </div>
         {% endfor %}
     </div>
 {% endblock main %}
+
+{% block scripts %}
+    <script>
+        // Фильтрация по категориям
+        document.querySelectorAll('.category-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                // Удаляем активный класс у всех кнопок
+                document.querySelectorAll('.category-btn').forEach(b => {
+                    b.classList.remove('active');
+                });
+                
+                // Добавляем активный класс текущей кнопке
+                this.classList.add('active');
+                
+                const category = this.dataset.category;
+                document.querySelectorAll('.card').forEach(card => {
+                    if (category === 'all' || card.dataset.category === category) {
+                        card.style.display = 'block';
+                    } else {
+                        card.style.display = 'none';
+                    }
+                });
+            });
+        });
+    </script>
+{% endblock scripts %}

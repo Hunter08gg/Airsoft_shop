@@ -10,8 +10,8 @@ class Creater(models.Model):
         return self.name
     
     class Meta:
-        verbose_name = "Создатель"
-        verbose_name_plural = "Создатели"
+        verbose_name = "Производитель"
+        verbose_name_plural = "Производители"
 
     def parse_object(self):
         return {
@@ -19,22 +19,50 @@ class Creater(models.Model):
             "name": self.name,
         }
 
-# Модели для оружия и подклассов
-class Weapon(models.Model):
+class BaseItem(models.Model):
     name = models.CharField("Название", max_length=120)
     description = models.TextField("Описание")
-    damage = models.IntegerField("Урон")
-    fire_rate = models.IntegerField("Скорострельность")
-    accuracy = models.IntegerField("Точность")
     weight = models.FloatField("Вес")
     price = models.FloatField("Цена")
-    date_added = models.DateTimeField("Дата добавления", auto_now_add = True)
-    cover = models.ImageField("Обложка", upload_to= "covers/", null = True, blank = True) # только картинки
-    cover_card = ImageSpecField([ResizeToFit(200, 200)], source= "cover", format= "PNG")
+    date_added = models.DateTimeField("Дата добавления", auto_now_add=True)
+    cover = models.ImageField("Обложка", upload_to="covers/", null=True, blank=True)
+    cover_card = ImageSpecField([ResizeToFit(200, 200)], source="cover", format="PNG")
+    creator = models.ForeignKey(Creater, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Производитель")
+
+    class Meta:
+        abstract = True
+
+    @property
+    def category(self):
+        if isinstance(self, Weapon):
+            if isinstance(self, AssaultRifle):
+                return 'assault'
+            elif isinstance(self, SniperRifle):
+                return 'sniper'
+            elif isinstance(self, MachineGun):
+                return 'assault'  # Пистолеты-пулеметы
+            elif isinstance(self, Shotgun):
+                return 'shotgun'
+            elif isinstance(self, MeleeWeapon):
+                return 'melee'
+            elif isinstance(self, Pistol):
+                return 'pistol'
+            return 'weapon'
+        elif isinstance(self, Armor):
+            return 'armor'
+        elif isinstance(self, Accessory):
+            return 'accessory'
+        return 'other'
 
     def __str__(self):
         return self.name
-    
+
+# Модели для оружия и подклассов
+class Weapon(BaseItem):
+    damage = models.IntegerField("Урон")
+    fire_rate = models.IntegerField("Скорострельность")
+    accuracy = models.IntegerField("Точность")
+
     class Meta:
         verbose_name = "Оружие"
         verbose_name_plural = "Оружие"
@@ -94,18 +122,9 @@ class Pistol(Weapon):
         verbose_name_plural = "Пистолеты"
 
 # Модели для брони и подклассов
-class Armor(models.Model):
-    name = models.CharField("Название", max_length=120)
-    description = models.TextField("Описание")
+class Armor(BaseItem):
     protection_level = models.IntegerField("Уровень защиты")
-    weight = models.FloatField("Вес")
-    price = models.FloatField("Цена")
-    date_added = models.DateTimeField("Дата добавления", auto_now_add=True)
-    cover = models.ImageField("Обложка", upload_to= "covers/", null = True, blank = True)
 
-    def __str__(self):
-        return self.name
-    
     class Meta:
         verbose_name = "Броня"
         verbose_name_plural = "Броня"
@@ -120,7 +139,7 @@ class Helmet(Armor):
         verbose_name_plural = "Каски"
 
 class BodyArmor(Armor):
-    armor_type = models.CharField("Тип брони", max_length=50)  # e.g. "Кевлар", "Керамика"
+    armor_type = models.CharField("Тип брони", max_length=50)
     covers_torso = models.BooleanField("Защищает торс", default=True)
     covers_groin = models.BooleanField("Защищает пах", default=False)
 
@@ -138,21 +157,10 @@ class LimbProtection(Armor):
         verbose_name_plural = "Защита конечностей"
 
 # Модель для аксессуаров
-class Accessory(models.Model):
-    name = models.CharField("Название", max_length=120)
-    description = models.TextField("Описание")
+class Accessory(BaseItem):
     type = models.CharField("Тип аксессуара", max_length=50)
-    weight = models.FloatField("Вес")
-    price = models.FloatField("Цена")
     compatible_with = models.ManyToManyField(Weapon, blank=True, verbose_name="Совместимо с")
-    date_added = models.DateTimeField("Дата добавления", auto_now_add=True)
-    cover = models.ImageField("Обложка", upload_to= "covers/", null = True, blank = True)
-   
 
-    def __str__(self):
-        return self.name
-    
     class Meta:
         verbose_name = "Аксессуар"
-        verbose_name_plural = "Акссуары"
-
+        verbose_name_plural = "Аксессуары"

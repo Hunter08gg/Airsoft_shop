@@ -1,25 +1,83 @@
 {% extends "base.html" %}
 
 {% block main %}
-    <h1>Каталог оружия</h1>
+    <div class="banner">
+        <h1>Каталог страйкбольного снаряжения</h1>
+        <p>Лучшее оборудование для тактических игр</p>
+    </div>
 
     <form class="panel-filter" method="GET">
-        <label for="creater">Автор:</label>
-        <select name="creater" id="creater">
-            
-        </select>
+        <div class="filter-group">
+            <label for="category">Категория:</label>
+            <select name="category" id="category">
+                <option value="">Все</option>
+                <option value="weapon">Оружие</option>
+                <option value="armor">Броня</option>
+                <option value="accessory">Аксессуары</option>
+            </select>
+        </div>
 
-        <input type="submit" value="Найти">
+        <div class="filter-group">
+            <label for="creater">Производитель:</label>
+            <select name="creater" id="creater">
+                <option value="">Все</option>
+                {% for creator in creators %}
+                    <option value="{{ creator.id }}">{{ creator.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="filter-group">
+            <label for="price_min">Цена от:</label>
+            <input type="number" name="price_min" id="price_min" min="0">
+            
+            <label for="price_max">до:</label>
+            <input type="number" name="price_max" id="price_max" min="0">
+        </div>
+
+        <input type="submit" class="btn" value="Найти">
     </form>
 
+    <div class="category-filter">
+        <button class="category-btn" data-category="all">Все</button>
+        <button class="category-btn" data-category="assault">Автоматы</button>
+        <button class="category-btn" data-category="assault">Пистолеты пулемёты</button>
+        <button class="category-btn" data-category="sniper">Снайперские</button>
+        <button class="category-btn" data-category="shotgun">Дробовики</button>
+        <button class="category-btn" data-category="pistol">Пистолеты</button>
+        <button class="category-btn" data-category="melee">Холодное</button>
+        <button class="category-btn" data-category="armor">Броня</button>
+        <button class="category-btn" data-category="accessory">Аксессуары</button>
+    </div>
+
     <div class="wrap">
-        {% for weapon in weapons %}
-            <div class="card">
-                <h2 class="name-card">{{ weapon.name }}</h2>
-                <p class="description-card">{{ weapon.description }}</p>
-                {% if weapon.cover %}
-                <img src="{{weapon.cover_card.url}}" alt="{{weapon.name}}">
+        {% for item in items %}
+            <div class="card" data-category="{{ item.category }}">
+                {% if item.cover_card %}
+                <img src="{{ item.cover_card.url }}" alt="{{ item.name }}" class="card-image">
                 {% endif %}
+                
+                <h2 class="title-card">{{ item.name }}</h2>
+                
+                <div class="price">{{ item.price }} ₽</div>
+                
+                <div class="specs">
+                    {% if item.damage %}
+                        <div class="spec"><span>Урон:</span> {{ item.damage }}</div>
+                    {% endif %}
+                    {% if item.protection_level %}
+                        <div class="spec"><span>Защита:</span> {{ item.protection_level }}</div>
+                    {% endif %}
+                    {% if item.weight %}
+                        <div class="spec"><span>Вес:</span> {{ item.weight }} кг</div>
+                    {% endif %}
+                </div>
+                
+                <div class="desc-card">
+                    {{ item.description|truncatechars:150 }}
+                </div>
+                
+                <button class="btn">В корзину</button>
             </div>
         {% endfor %}
     </div>
@@ -27,4 +85,17 @@
 
 {% block scripts %}
     <script src="/static/loadForms.js"></script>
+    <script>
+        // Фильтрация по категориям
+        document.querySelectorAll('.category-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const category = this.dataset.category;
+                document.querySelectorAll('.card').forEach(card => {
+                    card.style.display = (category === 'all' || card.dataset.category === category) 
+                        ? 'block' 
+                        : 'none';
+                });
+            });
+        });
+    </script>
 {% endblock scripts %}
