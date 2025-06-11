@@ -26,7 +26,8 @@ class Weapon(models.Model):
     accuracy = models.IntegerField("Точность")
     weight = models.FloatField("Вес")
     price = models.FloatField("Цена")
-    date_added = models.DateTimeField("Дата добавления", auto_now_add=True)
+    date_added = models.DateTimeField("Дата добавления", auto_now_add = True)
+    cover = models.ImageField("Обложка", upload_to= "covers/", null = True, blank = True) # только картинки
 
     def __str__(self):
         return self.name
@@ -97,6 +98,7 @@ class Armor(models.Model):
     weight = models.FloatField("Вес")
     price = models.FloatField("Цена")
     date_added = models.DateTimeField("Дата добавления", auto_now_add=True)
+    cover = models.ImageField("Обложка", upload_to= "covers/", null = True, blank = True)
 
     def __str__(self):
         return self.name
@@ -141,6 +143,7 @@ class Accessory(models.Model):
     price = models.FloatField("Цена")
     compatible_with = models.ManyToManyField(Weapon, blank=True, verbose_name="Совместимо с")
     date_added = models.DateTimeField("Дата добавления", auto_now_add=True)
+    cover = models.ImageField("Обложка", upload_to= "covers/", null = True, blank = True)
 
     def __str__(self):
         return self.name

@@ -17,6 +17,9 @@
             <div class="card">
                 <h2 class="name-card">{{ weapon.name }}</h2>
                 <p class="description-card">{{ weapon.description }}</p>
+                {% if weapon.cover %}
+                <img src="weapon.cover.url" alt="{{weapon.name}}">
+                {% endif %}
             </div>
         {% endfor %}
     </div>
