@@ -19,6 +19,7 @@ class Creater(models.Model):
             "name": self.name,
         }
 
+
 class BaseItem(models.Model):
     name = models.CharField("Название", max_length=120)
     description = models.TextField("Описание")

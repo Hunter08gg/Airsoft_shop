@@ -13,6 +13,11 @@ class IndexListView(ListView):
     template_name = "index.html"
     context_object_name = "weapons"
 
+
+def about(request):
+    creators = Creater.objects.all()
+    return render(request, 'about.html', {'creators': creators})
+
 def catalog(request: HttpRequest):
     # Получаем параметры фильтрации
     category = request.GET.get("category")
