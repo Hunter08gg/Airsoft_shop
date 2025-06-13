@@ -24,13 +24,16 @@ body {
 
 .card {
     width: 300px;
-    height: 400px;
+    min-height: 400px; /* Изменено с height на min-height */
     box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
     border-radius: 8px;
     padding: 20px;
     background-color: white;
     transition: transform 0.3s ease;
     border: 1px solid #ddd;
+    display: flex;
+    flex-direction: column;
+    position: relative; /* Добавлено для абсолютного позиционирования */
 }
 
 .card:hover {
@@ -54,12 +57,59 @@ body {
     margin: 10px 0;
 }
 
+.specs {
+    margin: 10px 0;
+    font-size: 0.9rem;
+    color: #555;
+}
+
+
 .desc-card {
-    height: 180px;
-    overflow-y: auto;
-    margin-bottom: 15px;
+    flex: 1;
+    overflow-y: auto;  /* Включаем вертикальную прокрутку */
+    margin: 10px 0;
     line-height: 1.4;
     font-size: 0.9rem;
+    padding-right: 10px;
+    max-height: 120px;  /* Фиксированная высота блока */
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    white-space: normal;  /* Разрешаем перенос строк */
+    text-overflow: clip;  /* Убираем многоточие */
+    display: block;  /* Меняем на block вместо flex */
+    -webkit-line-clamp: initial;  /* Сбрасываем ограничение строк */
+    -webkit-box-orient: initial;
+}
+
+/* Улучшенная стилизация скроллбара */
+.desc-card::-webkit-scrollbar {
+    width: 6px;
+}
+
+.desc-card::-webkit-scrollbar-thumb {
+    background-color: #e74c3c;
+    border-radius: 3px;
+}
+
+.desc-card::-webkit-scrollbar-track {
+    background-color: #f1f1f1;
+    border-radius: 3px;
+}
+
+.features {
+    margin-top: 10px;
+    font-size: 0.85rem;
+}
+
+.features ul {
+    padding-left: 20px;
+    margin-top: 5px;
+}
+
+.card-footer {
+    margin-top: auto;
+    padding-top: 15px;
+    border-top: 1px solid #eee;
 }
 
 .btn {
@@ -74,6 +124,7 @@ body {
     text-transform: uppercase;
     font-size: 0.8rem;
     font-weight: bold;
+    width: 100%;
 }
 
 .btn:hover {

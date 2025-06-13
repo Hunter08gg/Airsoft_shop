@@ -27,7 +27,7 @@
                         <img src="{{ user.profile.avatar.url }}" alt="Аватар" class="avatar">
                     {% endif %}
                 </a>
-                <a href="{% url 'static/styles.css' %}" class="cart-link">
+                <a href="/static/styles.css" class="cart-link">
                     Корзина <span class="cart-count">{% if cart_count %}({{ cart_count }}){% endif %}</span>
                 </a>
                 <a href="{% url 'logout' %}" class="logout">Выйти</a>
@@ -62,7 +62,7 @@
                     <li><a href="{% url 'catalog' %}?category=accessory">Аксессуары</a></li>
                 </ul>
             </div>
-            <!--
+            
                 <div class="footer-section">
                 <h3>Производители</h3>
                 <ul>
@@ -71,7 +71,7 @@
                     {% endfor %}
                 </ul>
             </div>
-            -->
+            
             <div class="footer-section">
                 <h3>Контакты</h3>
                 <p>Email: info@airsoftshop.com</p>
