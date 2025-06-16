@@ -27,8 +27,8 @@
                         <img src="{{ user.profile.avatar.url }}" alt="Аватар" class="avatar">
                     {% endif %}
                 </a>
-                <a href="/static/styles.css" class="cart-link">
-                    Корзина <span class="cart-count">{% if cart_count %}({{ cart_count }}){% endif %}</span>
+                <a href="{% url 'cart' %}" class="cart-link">
+                Корзина <span class="cart-count">{% if cart_count %}({{ cart_count }}){% endif %}</span>
                 </a>
                 <a href="{% url 'logout' %}" class="logout">Выйти</a>
             {% else %}

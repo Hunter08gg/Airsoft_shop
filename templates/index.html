@@ -40,6 +40,9 @@
                         {% if item.type %}
                             <div class="spec"><span>Тип:</span> {{ item.type }}</div>
                         {% endif %}
+                        {% if item.creator %}
+                            <div class="spec"><span>Производитель:</span> {{ item.creator.name }}</div>
+                        {% endif %}
                     </div>
                     
                     <div class="desc-card">
@@ -50,7 +53,7 @@
                         <div class="date-added">
                             Добавлено: {{ item.date_added|date:"d.m.Y" }}
                         </div>
-                        <button class="btn">Подробнее</button>
+                        <a href="{% url 'item_detail' item.id %}" class="btn">Подробнее</a>
                     </div>
                 </div>
             </div>

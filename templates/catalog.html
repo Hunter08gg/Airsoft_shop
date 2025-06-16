@@ -77,7 +77,8 @@
                     {{ item.description|truncatechars:150 }}
                 </div>
                 
-                <button class="btn">В корзину</button>
+                <a href="{% url 'add_to_cart' item.id %}" class="btn">В корзину</a>
+
             </div>
         {% endfor %}
     </div>

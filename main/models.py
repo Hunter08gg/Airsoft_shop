@@ -1,7 +1,26 @@
 from django.db import models
+from django.conf import settings
 from imagekit.models.fields import ImageSpecField
 from imagekit.processors import ResizeToFit
+from django.contrib.auth.models import User
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+from django.contrib.contenttypes.fields import GenericForeignKey
+from django.contrib.contenttypes.models import ContentType
 
+
+class Profile(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
+    avatar = models.ImageField(upload_to='avatars/', null=True, blank=True)
+    
+    def __str__(self):
+        return f'Профиль {self.user.username}'
+
+@receiver(post_save, sender=User)
+def manage_user_profile(sender, instance, created, **kwargs):
+    """Автоматически создает или обновляет профиль пользователя"""
+    Profile.objects.get_or_create(user=instance)
+    instance.profile.save()
 class Creater(models.Model):
     name = models.CharField("Полное имя", max_length=80)
     bio = models.TextField("Биография")
@@ -10,8 +29,9 @@ class Creater(models.Model):
         return self.name
     
     class Meta:
-        verbose_name = "Производитель"
-        verbose_name_plural = "Производители"
+        verbose_name = "Создатель"
+        verbose_name_plural = "Создатели"
+
 
     def parse_object(self):
         return {
@@ -32,6 +52,7 @@ class BaseItem(models.Model):
 
     class Meta:
         abstract = True
+
 
     @property
     def category(self):
@@ -165,3 +186,30 @@ class Accessory(BaseItem):
     class Meta:
         verbose_name = "Аксессуар"
         verbose_name_plural = "Аксессуары"
+
+class Cart(models.Model):
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='cart')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Корзина пользователя {self.user.username}"
+
+    @property
+    def total_price(self):
+        return sum(item.total_price for item in self.items.all())
+
+class CartItem(models.Model):
+    cart = models.ForeignKey(Cart, on_delete=models.CASCADE, related_name='items')
+    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
+    object_id = models.PositiveIntegerField()
+    item = GenericForeignKey('content_type', 'object_id')  # Ссылка на любой товар
+    quantity = models.PositiveIntegerField(default=1)
+    added_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.quantity} x {self.item.name}"
+
+    @property
+    def total_price(self):
+        return self.item.price * self.quantity

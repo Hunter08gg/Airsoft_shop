@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block main %}
+<div class="cart-container">
+    <h2>Ваша корзина</h2>
+    
+    {% if cart.items.all %}
+        <div class="cart-items">
+            {% for item in cart.items.all %}
+            <div class="cart-item">
+                <div class="item-image">
+                    {% if item.item.cover_card %}
+                        <img src="{{ item.item.cover_card.url }}" alt="{{ item.item.name }}">
+                    {% endif %}
+                </div>
+                <div class="item-details">
+                    <h3>{{ item.item.name }}</h3>
+                    <p>Цена: {{ item.item.price }} ₽</p>
+                    <form method="post" action="{% url 'update_cart_item' item.id %}">
+                        {% csrf_token %}
+                        <input type="number" name="quantity" value="{{ item.quantity }}" min="1">
+                        <button type="submit" class="btn">Обновить</button>
+                    </form>
+                </div>
+                <div class="item-total">
+                    <p>Всего: {{ item.total_price }} ₽</p>
+                    <a href="{% url 'remove_from_cart' item.id %}" class="btn btn-danger">Удалить</a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        
+        <div class="cart-summary">
+            <h3>Итого: {{ cart.total_price }} ₽</h3>
+            <a href="{% url 'checkout' %}" class="btn btn-primary">Оформить заказ</a>
+        </div>
+    {% else %}
+        <p>Ваша корзина пуста</p>
+        <a href="{% url 'catalog' %}" class="btn">Перейти в каталог</a>
+    {% endif %}
+</div>
+{% endblock %}
