@@ -203,7 +203,7 @@ class CartItem(models.Model):
     cart = models.ForeignKey(Cart, on_delete=models.CASCADE, related_name='items')
     content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
     object_id = models.PositiveIntegerField()
-    item = GenericForeignKey('content_type', 'object_id')  # Ссылка на любой товар
+    item = GenericForeignKey('content_type', 'object_id')
     quantity = models.PositiveIntegerField(default=1)
     added_at = models.DateTimeField(auto_now_add=True)
 
@@ -213,3 +213,17 @@ class CartItem(models.Model):
     @property
     def total_price(self):
         return self.item.price * self.quantity
+    
+class Order(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    items = models.ManyToManyField(CartItem)
+    total_price = models.DecimalField(max_digits=10, decimal_places=2)
+    created_at = models.DateTimeField(auto_now_add=True)
+    status = models.CharField(max_length=20, default='pending', choices=[
+        ('pending', 'Ожидает обработки'),
+        ('completed', 'Завершен'),
+        ('cancelled', 'Отменен')
+    ])
+
+    def __str__(self):
+        return f"Заказ #{self.id} - {self.user.username}"

@@ -4,6 +4,7 @@ from django.contrib.auth import login as auth_login, logout as auth_logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
 from django.contrib.auth.models import User
+from django.contrib.contenttypes.models import ContentType
 from django.contrib.auth.decorators import login_required
 from .models import BaseItem,  Creater, Profile 
 from django.contrib import messages
@@ -13,7 +14,7 @@ from main.models import (
     Creater, 
     Weapon, AssaultRifle, SniperRifle, MachineGun, Shotgun, MeleeWeapon, Pistol,
     Armor, Helmet, BodyArmor, LimbProtection,
-    Accessory
+    Accessory, Order
 )
 def index(request):
     # Получаем все товары (включая подклассы) с предзагрузкой производителя
@@ -37,13 +38,27 @@ def about(request):
 def catalog(request: HttpRequest):
     # Получаем параметры фильтрации
     category = request.GET.get("category")
+    subcategory = request.GET.get("subcategory")
     creater_id = request.GET.get("creater")
     price_min = request.GET.get("price_min")
     price_max = request.GET.get("price_max")
 
-    # Фильтрация по категории
+    # Фильтрация по категории и подкатегории
     if category == "weapon":
-        items = Weapon.objects.all()
+        if subcategory == "assault":
+            items = AssaultRifle.objects.all()
+        elif subcategory == "sniper":
+            items = SniperRifle.objects.all()
+        elif subcategory == "machinegun":
+            items = MachineGun.objects.all()
+        elif subcategory == "shotgun":
+            items = Shotgun.objects.all()
+        elif subcategory == "pistol":
+            items = Pistol.objects.all()
+        elif subcategory == "melee":
+            items = MeleeWeapon.objects.all()
+        else:
+            items = Weapon.objects.all()
     elif category == "armor":
         items = Armor.objects.all()
     elif category == "accessory":
@@ -74,6 +89,14 @@ def catalog(request: HttpRequest):
 
     # Получаем всех производителей для фильтра
     creators = Creater.objects.all()
+
+    context = {
+        'items': items,
+        'creators': creators,
+        'current_category': category,
+        'current_subcategory': subcategory,
+    }
+    return render(request, "catalog.html", context)
 
     context = {
         'items': items,
@@ -123,29 +146,89 @@ def account(request, user_id):
 
 @login_required
 def cart_view(request):
-    cart, created = Cart.objects.get_or_create(user=request.user)
-    return render(request, 'cart.html', {'cart': cart})
+    cart = get_object_or_404(Cart, user=request.user)
+    cart_items = cart.items.all().select_related('content_type')
+    
+    items = []
+    for cart_item in cart_items:
+        try:
+            item = cart_item.item
+            if item:  # Проверяем, что товар существует
+                items.append({
+                    'cart_item': cart_item,
+                    'item': item,
+                    'total_price': cart_item.quantity * item.price
+                })
+        except:
+            # Если товар был удален, удаляем и запись из корзины
+            cart_item.delete()
+    
+    total = sum(item['total_price'] for item in items)
+    
+    return render(request, 'cart.html', {
+        'cart': cart,
+        'items': items,
+        'total_price': total
+    })
 
 @login_required
 def add_to_cart(request, item_id):
-    item = get_object_or_404(BaseItem, pk=item_id)
-    cart, created = Cart.objects.get_or_create(user=request.user)
-    
-    cart_item, created = CartItem.objects.get_or_create(
-        cart=cart,
-        item=item,
-        defaults={'quantity': 1}
-    )
-    
-    if not created:
-        cart_item.quantity += 1
-        cart_item.save()
-    
-    messages.success(request, f"Товар {item.name} добавлен в корзину")
-    return redirect(request.META.get('HTTP_REFERER', 'catalog'))
+    try:
+        # Получаем конкретный товар (не BaseItem, а его подкласс)
+        item = None
+        for model in [Weapon, Armor, Accessory]:  # Все ваши модели-наследники BaseItem
+            try:
+                item = model.objects.get(pk=item_id)
+                break
+            except model.DoesNotExist:
+                continue
+        
+        if not item:
+            raise BaseItem.DoesNotExist
 
+        # Получаем ContentType для конкретного класса товара
+        content_type = ContentType.objects.get_for_model(item.__class__)
+        
+        # Получаем или создаем корзину
+        cart, created = Cart.objects.get_or_create(user=request.user)
+        
+        # Ищем такой товар в корзине
+        cart_item, created = CartItem.objects.get_or_create(
+            cart=cart,
+            content_type=content_type,
+            object_id=item.id,
+            defaults={'quantity': 1}
+        )
+        
+        if not created:
+            cart_item.quantity += 1
+            cart_item.save()
+        
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            return JsonResponse({
+                'success': True,
+                'message': f"Товар {item.name} добавлен в корзину",
+                'cart_count': cart.items.count()
+            })
+        else:
+            messages.success(request, f"Товар {item.name} добавлен в корзину")
+            return redirect(request.META.get('HTTP_REFERER', 'catalog'))
+            
+    except BaseItem.DoesNotExist:
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            return JsonResponse({'success': False, 'error': "Товар не найден"}, status=404)
+        else:
+            messages.error(request, "Товар не найден")
+            return redirect('catalog')
+    except Exception as e:
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            return JsonResponse({'success': False, 'error': str(e)}, status=500)
+        else:
+            messages.error(request, f"Ошибка при добавлении в корзину: {str(e)}")
+            return redirect('catalog')
+        
 @login_required
-def remove_from_cart(request, item_id):
+def remove_from_cart(request, item_id):  
     cart_item = get_object_or_404(CartItem, pk=item_id, cart__user=request.user)
     cart_item.delete()
     messages.success(request, "Товар удален из корзины")
@@ -169,3 +252,32 @@ def update_cart_item(request, item_id):
         messages.error(request, "Некорректное количество")
     
     return redirect('cart')
+
+@login_required
+def checkout(request):
+    cart = get_object_or_404(Cart, user=request.user)
+    
+    if not cart.items.exists():
+        messages.warning(request, "Ваша корзина пуста")
+        return redirect('cart')
+    
+    if request.method == 'POST':
+        # Создаем заказ
+        total_price = sum(item.total_price for item in cart.items.all())
+        order = Order.objects.create(
+            user=request.user,
+            total_price=total_price
+        )
+        order.items.set(cart.items.all())
+        
+        # Очищаем корзину
+        cart.items.all().delete()
+        
+        messages.success(request, "Ваш заказ успешно оформлен!")
+        return redirect('order_detail', order_id=order.id)
+    
+    total_price = sum(item.total_price for item in cart.items.all())
+    return render(request, 'checkout.html', {
+        'cart': cart,
+        'total_price': total_price
+    })

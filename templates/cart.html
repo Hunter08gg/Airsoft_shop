@@ -25,6 +25,7 @@
                 <div class="item-total">
                     <p>Всего: {{ item.total_price }} ₽</p>
                     <a href="{% url 'remove_from_cart' item.id %}" class="btn btn-danger">Удалить</a>
+
                 </div>
             </div>
             {% endfor %}

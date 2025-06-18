@@ -6,97 +6,109 @@
         <p>Лучшее оборудование для тактических игр</p>
     </div>
 
-    <form class="panel-filter" method="GET">
+    <form class="panel-filter" method="GET" id="main-filter">
         <div class="filter-group">
             <label for="category">Категория:</label>
             <select name="category" id="category">
                 <option value="">Все</option>
-                <option value="weapon">Оружие</option>
-                <option value="armor">Броня</option>
-                <option value="accessory">Аксессуары</option>
+                <option value="weapon" {% if current_category == 'weapon' %}selected{% endif %}>Оружие</option>
+                <option value="armor" {% if current_category == 'armor' %}selected{% endif %}>Броня</option>
+                <option value="accessory" {% if current_category == 'accessory' %}selected{% endif %}>Аксессуары</option>
             </select>
         </div>
 
+        {% if current_category == 'weapon' %}
         <div class="filter-group">
-            <label for="creater">Производитель:</label>
-            <select name="creater" id="creater">
+            <label for="subcategory">Тип оружия:</label>
+            <select name="subcategory" id="subcategory">
                 <option value="">Все</option>
-                {% for creator in creators %}
-                    <option value="{{ creator.id }}">{{ creator.name }}</option>
-                {% endfor %}
+                <option value="assault" {% if current_subcategory == 'assault' %}selected{% endif %}>Автоматы</option>
+                <option value="sniper" {% if current_subcategory == 'sniper' %}selected{% endif %}>Снайперские</option>
+                <option value="machinegun" {% if current_subcategory == 'machinegun' %}selected{% endif %}>Пулемёты</option>
+                <option value="shotgun" {% if current_subcategory == 'shotgun' %}selected{% endif %}>Дробовики</option>
+                <option value="pistol" {% if current_subcategory == 'pistol' %}selected{% endif %}>Пистолеты</option>
+                <option value="melee" {% if current_subcategory == 'melee' %}selected{% endif %}>Холодное оружие</option>
             </select>
         </div>
-
-        <div class="filter-group">
-            <label for="price_min">Цена от:</label>
-            <input type="number" name="price_min" id="price_min" min="0">
-            
-            <label for="price_max">до:</label>
-            <input type="number" name="price_max" id="price_max" min="0">
-        </div>
-
-        <input type="submit" class="btn" value="Найти">
+        {% endif %}
     </form>
 
     <div class="category-filter">
         <button class="category-btn" data-category="all">Все</button>
-        <button class="category-btn" data-category="assault">Автоматы</button>
-        <button class="category-btn" data-category="assault">Пистолеты пулемёты</button>
-        <button class="category-btn" data-category="sniper">Снайперские</button>
-        <button class="category-btn" data-category="shotgun">Дробовики</button>
-        <button class="category-btn" data-category="pistol">Пистолеты</button>
-        <button class="category-btn" data-category="melee">Холодное</button>
+        {% if current_category == 'weapon' or not current_category %}
+        <button class="category-btn" data-category="weapon" data-subcategory="assault">Автоматы</button>
+        <button class="category-btn" data-category="weapon" data-subcategory="sniper">Снайперские</button>
+        <button class="category-btn" data-category="weapon" data-subcategory="machinegun">Пулемёты</button>
+        <button class="category-btn" data-category="weapon" data-subcategory="shotgun">Дробовики</button>
+        <button class="category-btn" data-category="weapon" data-subcategory="pistol">Пистолеты</button>
+        <button class="category-btn" data-category="weapon" data-subcategory="melee">Холодное</button>
+        {% endif %}
         <button class="category-btn" data-category="armor">Броня</button>
         <button class="category-btn" data-category="accessory">Аксессуары</button>
     </div>
 
-    <div class="wrap">
+    <!-- Добавьте этот раздел для отображения товаров -->
+    <div class="products-grid">
         {% for item in items %}
-            <div class="card" data-category="{{ item.category }}">
-                {% if item.cover_card %}
-                <img src="{{ item.cover_card.url }}" alt="{{ item.name }}" class="card-image">
-                {% endif %}
-                
-                <h2 class="title-card">{{ item.name }}</h2>
-                
-                <div class="price">{{ item.price }} ₽</div>
-                
-                <div class="specs">
-                    {% if item.damage %}
-                        <div class="spec"><span>Урон:</span> {{ item.damage }}</div>
-                    {% endif %}
-                    {% if item.protection_level %}
-                        <div class="spec"><span>Защита:</span> {{ item.protection_level }}</div>
-                    {% endif %}
-                    {% if item.weight %}
-                        <div class="spec"><span>Вес:</span> {{ item.weight }} кг</div>
-                    {% endif %}
-                </div>
-                
-                <div class="desc-card">
-                    {{ item.description|truncatechars:150 }}
-                </div>
-                
-                <a href="{% url 'add_to_cart' item.id %}" class="btn">В корзину</a>
-
-            </div>
+        <div class="product-card" data-category="{{ item.category }}">
+            {% if item.cover %}
+            <img src="{{ item.cover.url }}" alt="{{ item.name }}" class="product-image">
+            {% endif %}
+            <h3>{{ item.name }}</h3>
+            <p class="price">{{ item.price }} руб.</p>
+            <p class="description">{{ item.description|truncatechars:100 }}</p>
+            <button class="add-to-cart" data-item-id="{{ item.id }}">В корзину</button>
+        </div>
+        {% empty %}
+        <p class="no-items">Товары не найдены</p>
         {% endfor %}
     </div>
-{% endblock main %}
+{% endblock %}
 
 {% block scripts %}
-    <script src="/static/loadForms.js"></script>
     <script>
-        // Фильтрация по категориям
         document.querySelectorAll('.category-btn').forEach(btn => {
             btn.addEventListener('click', function() {
                 const category = this.dataset.category;
-                document.querySelectorAll('.card').forEach(card => {
-                    card.style.display = (category === 'all' || card.dataset.category === category) 
-                        ? 'block' 
-                        : 'none';
-                });
+                const subcategory = this.dataset.subcategory;
+                const mainForm = document.getElementById('main-filter');
+                
+                if (category === 'all') {
+                    mainForm.querySelector('#category').value = '';
+                    if (mainForm.querySelector('#subcategory')) {
+                        mainForm.querySelector('#subcategory').value = '';
+                    }
+                } else {
+                    mainForm.querySelector('#category').value = category;
+                    if (subcategory && mainForm.querySelector('#subcategory')) {
+                        mainForm.querySelector('#subcategory').value = subcategory;
+                    }
+                }
+                
+                mainForm.submit();
             });
         });
+
+        document.querySelector('#category').addEventListener('change', function() {
+            const subcategorySelect = document.querySelector('#subcategory');
+            if (subcategorySelect) {
+                if (this.value === 'weapon') {
+                    subcategorySelect.style.display = 'block';
+                } else {
+                    subcategorySelect.style.display = 'none';
+                }
+            }
+        });
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const categorySelect = document.querySelector('#category');
+            const subcategorySelect = document.querySelector('#subcategory');
+            
+            if (categorySelect && subcategorySelect) {
+                if (categorySelect.value !== 'weapon') {
+                    subcategorySelect.style.display = 'none';
+                }
+            }
+        });
     </script>
-{% endblock scripts %}
+{% endblock %}

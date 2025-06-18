@@ -5,35 +5,60 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Каталог страйкбольного снаряжения</title>
     <link rel="stylesheet" href="/static/styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     {% block extra_css %}{% endblock %}
 </head>
 <body>
     <header>
         <nav>
-            <a href="{% url 'index' %}"><h1>Главная</h1></a>
-            <a href="{% url 'catalog' %}"><h1>Каталог</h1></a>
-            <a href="{% url 'about' %}"><h1>О нас</h1></a>
-            
-            {% if user.is_authenticated and user.is_staff %}
-                <a href="{% url 'admin:index' %}"><h1>Админка</h1></a>
-            {% endif %}
+            <div class="nav-logo">
+                <a href="{% url 'index' %}">
+                    <h1>AirsoftShop</h1>
+                </a>
+            </div>
+            <div class="nav-links">
+                <a href="{% url 'index' %}" class="nav-link">Главная</a>
+                <a href="{% url 'catalog' %}" class="nav-link">Каталог</a>
+                <a href="{% url 'about' %}" class="nav-link">О нас</a>
+                
+                {% if user.is_authenticated and user.is_staff %}
+                    <a href="{% url 'admin:index' %}" class="nav-link">Админка</a>
+                {% endif %}
+            </div>
         </nav>
         
         <div class="auth">
             {% if user.is_authenticated %}
-                <a href="{% url 'account' user.id %}" class="user-profile">
-                    <span>{{ user.username }}</span>
-                    {% if user.profile.avatar %}
-                        <img src="{{ user.profile.avatar.url }}" alt="Аватар" class="avatar">
-                    {% endif %}
-                </a>
-                <a href="{% url 'cart' %}" class="cart-link">
-                Корзина <span class="cart-count">{% if cart_count %}({{ cart_count }}){% endif %}</span>
-                </a>
-                <a href="{% url 'logout' %}" class="logout">Выйти</a>
+                <div class="user-cart-wrapper">
+                    <a href="{% url 'cart' %}" class="cart-link">
+                        <i class="fas fa-shopping-cart"></i>
+                        <span class="cart-count">
+                            {% if request.user.cart.items.count > 0 %}
+                                ({{ request.user.cart.items.count }})
+                            {% endif %}
+                        </span>
+                    </a>
+                    
+                    <div class="user-profile-dropdown">
+                        <a href="{% url 'account' user.id %}" class="user-profile">
+                            {% if user.profile.avatar %}
+                                <img src="{{ user.profile.avatar.url }}" alt="Аватар" class="avatar">
+                            {% else %}
+                                <i class="fas fa-user-circle"></i>
+                            {% endif %}
+                            <span>{{ user.username }}</span>
+                        </a>
+                        <div class="dropdown-content">
+                            <a href="{% url 'account' user.id %}">Профиль</a>
+                            <a href="{% url 'logout' %}">Выйти</a>
+                        </div>
+                    </div>
+                </div>
             {% else %}
-                <a href="{% url 'login' %}">Войти</a>
-                <a href="{% url 'registration' %}">Регистрация</a>
+                <div class="auth-links">
+                    <a href="{% url 'login' %}" class="auth-link">Войти</a>
+                    <a href="{% url 'registration' %}" class="auth-link">Регистрация</a>
+                </div>
             {% endif %}
         </div>
     </header>
@@ -44,6 +69,7 @@
             {% for message in messages %}
             <div class="alert alert-{{ message.tags }}">
                 {{ message }}
+                <span class="close-message">&times;</span>
             </div>
             {% endfor %}
         </div>
@@ -63,27 +89,59 @@
                 </ul>
             </div>
             
-                <div class="footer-section">
+            <div class="footer-section">
                 <h3>Производители</h3>
                 <ul>
-                    {% for creator in creators %}
+                    {% for creator in creators|slice:":5" %}
                     <li><a href="{% url 'catalog' %}?creater={{ creator.id }}">{{ creator.name }}</a></li>
                     {% endfor %}
+                    {% if creators.count > 5 %}
+                        <li><a href="{% url 'about' %}">Все производители...</a></li>
+                    {% endif %}
                 </ul>
             </div>
             
             <div class="footer-section">
                 <h3>Контакты</h3>
-                <p>Email: info@airsoftshop.com</p>
-                <p>Телефон: +7 (123) 456-78-90</p>
+                <p><i class="fas fa-envelope"></i> info@airsoftshop.com</p>
+                <p><i class="fas fa-phone"></i> +7 (123) 456-78-90</p>
+                <div class="social-links">
+                    <a href="#"><i class="fab fa-vk"></i></a>
+                    <a href="#"><i class="fab fa-telegram"></i></a>
+                    <a href="#"><i class="fab fa-instagram"></i></a>
+                </div>
             </div>
         </div>
         <div class="copyright">
-            <p>&copy; 2023 Каталог страйкбольного снаряжения. Все права защищены.</p>
+            <p>&copy; {{ year|default:"2023" }} Каталог страйкбольного снаряжения. Все права защищены.</p>
         </div>
     </footer>
 
     <script src="/static/base.js"></script>
+    <script>
+        // Закрытие сообщений
+        document.querySelectorAll('.close-message').forEach(btn => {
+            btn.addEventListener('click', function() {
+                this.parentElement.style.display = 'none';
+            });
+        });
+
+        // Обновление количества товаров в корзине
+        function updateCartCount(count) {
+            const cartCount = document.querySelector('.cart-count');
+            if (count > 0) {
+                cartCount.textContent = `(${count})`;
+                cartCount.style.display = 'inline';
+            } else {
+                cartCount.style.display = 'none';
+            }
+        }
+
+        // Для AJAX обновления корзины
+        document.addEventListener('cartUpdated', function(e) {
+            updateCartCount(e.detail.count);
+        });
+    </script>
     {% block scripts %}{% endblock scripts %}
 </body>
 </html>

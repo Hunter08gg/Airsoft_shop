@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="checkout-container">
+    <h2>Оформление заказа</h2>
+    <div class="order-summary">
+        <h3>Ваш заказ</h3>
+        {% for item in cart.items.all %}
+            <div class="checkout-item">
+                <p>{{ item.item.name }} - {{ item.quantity }} × {{ item.item.price }} ₽</p>
+            </div>
+        {% endfor %}
+        <hr>
+        <h4>Итого: {{ cart.total_price }} ₽</h4>
+    </div>
+    
+    <form method="post" class="checkout-form">
+        {% csrf_token %}
+        <!-- Здесь будут поля формы оформления -->
+        <button type="submit" class="btn btn-primary">Подтвердить заказ</button>
+    </form>
+</div>
+{% endblock %}
