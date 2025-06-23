@@ -1,4 +1,6 @@
 from django.shortcuts import render, redirect, get_object_or_404
+from django.db import transaction
+from django.contrib import messages
 from django.views.generic import ListView
 from django.contrib.auth import login as auth_login, logout as auth_logout
 from django.contrib.auth.decorators import login_required
@@ -146,37 +148,43 @@ def account(request, user_id):
 
 @login_required
 def cart_view(request):
-    cart = get_object_or_404(Cart, user=request.user)
-    cart_items = cart.items.all().select_related('content_type')
+    try:
+        cart = Cart.objects.get(user=request.user)
+    except Cart.DoesNotExist:
+        cart = Cart.objects.create(user=request.user)
     
-    items = []
-    for cart_item in cart_items:
+    cart_items = []
+    total_price = 0
+    
+    for cart_item in cart.items.all():
         try:
             item = cart_item.item
-            if item:  # Проверяем, что товар существует
-                items.append({
+            if item:
+                item_total = cart_item.quantity * item.price
+                cart_items.append({
                     'cart_item': cart_item,
                     'item': item,
-                    'total_price': cart_item.quantity * item.price
+                    'total_price': item_total
                 })
+                total_price += item_total
         except:
-            # Если товар был удален, удаляем и запись из корзины
             cart_item.delete()
-    
-    total = sum(item['total_price'] for item in items)
     
     return render(request, 'cart.html', {
         'cart': cart,
-        'items': items,
-        'total_price': total
+        'items': cart_items,
+        'total_price': total_price
     })
 
+# Обновим функцию add_to_cart
 @login_required
 def add_to_cart(request, item_id):
     try:
-        # Получаем конкретный товар (не BaseItem, а его подкласс)
+        # Ищем товар во всех возможных моделях
         item = None
-        for model in [Weapon, Armor, Accessory]:  # Все ваши модели-наследники BaseItem
+        for model in [Weapon, AssaultRifle, SniperRifle, MachineGun, Shotgun, 
+                     MeleeWeapon, Pistol, Armor, Helmet, BodyArmor, 
+                     LimbProtection, Accessory]:
             try:
                 item = model.objects.get(pk=item_id)
                 break
@@ -184,13 +192,13 @@ def add_to_cart(request, item_id):
                 continue
         
         if not item:
-            raise BaseItem.DoesNotExist
+            raise BaseItem.DoesNotExist("Товар не найден")
 
-        # Получаем ContentType для конкретного класса товара
-        content_type = ContentType.objects.get_for_model(item.__class__)
-        
-        # Получаем или создаем корзину
+        # Получаем корзину пользователя или создаем новую
         cart, created = Cart.objects.get_or_create(user=request.user)
+        
+        # Получаем ContentType для конкретного класса товара
+        content_type = ContentType.objects.get_for_model(item)
         
         # Ищем такой товар в корзине
         cart_item, created = CartItem.objects.get_or_create(
@@ -204,40 +212,59 @@ def add_to_cart(request, item_id):
             cart_item.quantity += 1
             cart_item.save()
         
+        messages.success(request, f"Товар {item.name} добавлен в корзину")
+        
         if request.headers.get('x-requested-with') == 'XMLHttpRequest':
             return JsonResponse({
                 'success': True,
                 'message': f"Товар {item.name} добавлен в корзину",
                 'cart_count': cart.items.count()
             })
-        else:
-            messages.success(request, f"Товар {item.name} добавлен в корзину")
-            return redirect(request.META.get('HTTP_REFERER', 'catalog'))
+        return redirect(request.META.get('HTTP_REFERER', 'catalog'))
             
-    except BaseItem.DoesNotExist:
-        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-            return JsonResponse({'success': False, 'error': "Товар не найден"}, status=404)
-        else:
-            messages.error(request, "Товар не найден")
-            return redirect('catalog')
     except Exception as e:
+        messages.error(request, f"Ошибка: {str(e)}")
         if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-            return JsonResponse({'success': False, 'error': str(e)}, status=500)
-        else:
-            messages.error(request, f"Ошибка при добавлении в корзину: {str(e)}")
-            return redirect('catalog')
-        
-@login_required
-def remove_from_cart(request, item_id):  
-    cart_item = get_object_or_404(CartItem, pk=item_id, cart__user=request.user)
-    cart_item.delete()
-    messages.success(request, "Товар удален из корзины")
-    return redirect('cart')
+            return JsonResponse({'success': False, 'error': str(e)}, status=400)
+        return redirect('catalog')
 
+# Добавим функцию для AJAX обновления количества
 @login_required
-def update_cart_item(request, item_id):
-    cart_item = get_object_or_404(CartItem, pk=item_id, cart__user=request.user)
-    quantity = request.POST.get('quantity', 1)
+def update_cart_item_ajax(request, item_id):
+    if request.method == 'POST' and request.is_ajax():
+        try:
+            cart_item = CartItem.objects.get(pk=item_id, cart__user=request.user)
+            quantity = int(request.POST.get('quantity', 1))
+            
+            if quantity > 0:
+                cart_item.quantity = quantity
+                cart_item.save()
+                
+                # Получаем обновленные данные корзины
+                cart = cart_item.cart
+                total_price = sum(
+                    item.quantity * item.item.price 
+                    for item in cart.items.all() 
+                    if hasattr(item, 'item')
+                )
+                
+                return JsonResponse({
+                    'success': True,
+                    'quantity': cart_item.quantity,
+                    'item_total': cart_item.quantity * cart_item.item.price,
+                    'cart_total': total_price
+                })
+            else:
+                cart_item.delete()
+                return JsonResponse({
+                    'success': True,
+                    'deleted': True
+                })
+                
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)}, status=400)
+    
+    return JsonResponse({'success': False, 'error': 'Invalid request'}, status=400)
     
     try:
         quantity = int(quantity)
@@ -252,6 +279,40 @@ def update_cart_item(request, item_id):
         messages.error(request, "Некорректное количество")
     
     return redirect('cart')
+
+@login_required
+def remove_from_cart(request, item_id):
+    try:
+        cart_item = CartItem.objects.get(pk=item_id, cart__user=request.user)
+        cart_item.delete()
+        
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            # Получаем обновленные данные корзины
+            cart = request.user.cart
+            total_price = sum(
+                item.quantity * item.item.price 
+                for item in cart.items.all()
+                if hasattr(item, 'item') )
+            
+            return JsonResponse({
+                'success': True,
+                'message': 'Товар удален из корзины',
+                'cart_total': total_price,
+                'cart_count': cart.items.count()
+            })
+        else:
+            messages.success(request, "Товар удален из корзины")
+            return redirect('cart')
+            
+    except CartItem.DoesNotExist:
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            return JsonResponse({
+                'success': False,
+                'error': 'Товар не найден в корзине'
+            }, status=404)
+        else:
+            messages.error(request, "Товар не найден в корзине")
+            return redirect('cart')
 
 @login_required
 def checkout(request):
@@ -281,3 +342,27 @@ def checkout(request):
         'cart': cart,
         'total_price': total_price
     })
+
+@login_required
+def cart_count(request):
+    try:
+        cart = Cart.objects.get(user=request.user)
+        count = cart.items.count()
+    except Cart.DoesNotExist:
+        count = 0
+    
+    return JsonResponse({'count': count})
+
+@login_required
+def cart_total(request):
+    try:
+        cart = Cart.objects.get(user=request.user)
+        total = sum(
+            item.quantity * item.item.price 
+            for item in cart.items.all() 
+            if hasattr(item, 'item')
+        )
+    except Cart.DoesNotExist:
+        total = 0
+    
+    return JsonResponse({'total': total})

@@ -57,7 +57,10 @@
             <h3>{{ item.name }}</h3>
             <p class="price">{{ item.price }} руб.</p>
             <p class="description">{{ item.description|truncatechars:100 }}</p>
-            <button class="add-to-cart" data-item-id="{{ item.id }}">В корзину</button>
+            <button class="add-to-cart" data-item-id="{{ item.id }}">
+    В корзину
+    <span class="cart-icon">🛒</span>
+</button>
         </div>
         {% empty %}
         <p class="no-items">Товары не найдены</p>
@@ -66,6 +69,7 @@
 {% endblock %}
 
 {% block scripts %}
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script>
         document.querySelectorAll('.category-btn').forEach(btn => {
             btn.addEventListener('click', function() {
@@ -110,5 +114,52 @@
                 }
             }
         });
+    </script>
+        <script>
+$(document).ready(function() {
+        $('.add-to-cart').click(function() {
+        const itemId = $(this).data('item-id');
+        const button = $(this);
+        
+        $.ajax({
+            url: "{% url 'add_to_cart' 0 %}".replace('0', itemId),
+            method: 'POST',
+            data: {
+                'csrfmiddlewaretoken': '{{ csrf_token }}'
+            },
+            success: function(response) {
+                if (response.success) {
+                    // Показываем уведомление
+                    showNotification(response.message);
+                    
+                    // Обновляем счетчик корзины
+                    $('.cart-count').text(response.cart_count);
+                    
+                    // Анимация кнопки
+                    button.addClass('added');
+                    setTimeout(function() {
+                        button.removeClass('added');
+                    }, 1000);
+                }
+            },
+            error: function(xhr) {
+                const error = xhr.responseJSON.error || 'Произошла ошибка';
+                showNotification(error, 'error');
+            }
+        });
+    });
+    
+    function showNotification(message, type = 'success') {
+        const notification = $('<div class="notification ' + type + '">' + message + '</div>');
+        $('body').append(notification);
+        notification.fadeIn();
+        setTimeout(function() {
+            notification.fadeOut(function() {
+                $(this).remove();
+            });
+        }, 3000);
+    }
+});
+
     </script>
 {% endblock %}
