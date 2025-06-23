@@ -23,7 +23,7 @@ from main.models import (
     Accessory, Order
 )
 from django.contrib.contenttypes.models import ContentType
-ContentType.objects.get_for_model(Helmet)
+#ContentType.objects.get_for_model(Helmet)
 
 def index(request):
     # Получаем параметры фильтрации из GET-запроса

@@ -1,10 +1,66 @@
 {% extends "base.html" %}
 
 {% block main %}
-    <div class="banner">
-        <h1>Оружие на любой вкус</h1>
-        <p>Полный ассортимент страйкбольного оружия и снаряжения</p>
+<div class="promo-slider">
+    <div class="slider-container">
+        <!-- Слайд 1 -->
+        <div class="slide active">
+            <img src="/static/images/slider1.jpg" alt="Новинка сезона - HK416 A5">
+            <div class="slide-content">
+                <h2>НОВИНКА СЕЗОНА</h2>
+                <p>HK416 A5 с улучшенной механикой</p>
+                <div class="price-tag">49 990 ₽ <span class="old-price">59 990 ₽</span></div>
+                <div class="slide-buttons">
+                    <a href="#" class="btn btn-buy">Купить сейчас</a>
+                    <a href="#" class="btn btn-details">Подробнее</a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Слайд 2 -->
+        <div class="slide">
+            <img src="/static/images/slider2.jpg" alt="Распродажа экипировки">
+            <div class="slide-content">
+                <h2>РАСПРОДАЖА ЭКИПИРОВКИ</h2>
+                <p>Скидки до 40% на весь тактический комплект</p>
+                <div class="price-tag">от 7 990 ₽</div>
+                <div class="slide-buttons">
+                    <a href="#" class="btn btn-buy">Купить сейчас</a>
+                    <a href="#" class="btn btn-details">Подробнее</a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Слайд 3 -->
+        <div class="slide">
+            <img src="/static/images/slider3.jpg" alt="Летний страйкбольный турнир">
+            <div class="slide-content">
+                <h2>ЛЕТНИЙ ТУРНИР 2024</h2>
+                <p>Зарегистрируйся и получи скидку 15% на снаряжение</p>
+                <div class="slide-buttons">
+                    <a href="#" class="btn btn-buy">Участвовать</a>
+                    <a href="#" class="btn btn-details">Условия</a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Навигационные точки -->
+        <div class="slider-dots">
+            <span class="dot active" data-slide="0"></span>
+            <span class="dot" data-slide="1"></span>
+            <span class="dot" data-slide="2"></span>
+        </div>
+        
+        <!-- Стрелки навигации -->
+        <button class="slider-arrow prev">❮</button>
+        <button class="slider-arrow next">❯</button>
     </div>
+</div>
+
+<div class="banner">
+    <h1>Оружие на любой вкус</h1>
+    <p>Полный ассортимент страйкбольного оружия и снаряжения</p>
+</div>
 
     <!-- Форма фильтрации как в catalog.html -->
     <form class="panel-filter" method="GET" id="main-filter">
@@ -109,14 +165,75 @@
 {% endblock main %}
 
 {% block scripts %}
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
-$(document).ready(function() {
-    // Обработчики кнопок категорий
-    // В блоке scripts index.html обновите обработчик категорий
-document.querySelectorAll('.category-btn').forEach(btn => {
-    btn.addEventListener('click', function() {
-        const category = this.dataset.category;
+// Проверяем загрузку jQuery
+function initWhenReady() {
+    if (window.jQuery) {
+        initSlider();
+        initFilters();
+        initCart();
+    } else {
+        setTimeout(initWhenReady, 100);
+    }
+}
+
+// Инициализация слайдера
+function initSlider() {
+    const $slides = $('.slide');
+    const $dots = $('.dot');
+    let currentSlide = 0;
+    let slideInterval;
+
+    function startSlider() {
+        slideInterval = setInterval(nextSlide, 5000);
+    }
+
+    function nextSlide() {
+        goToSlide(currentSlide + 1);
+    }
+
+    function prevSlide() {
+        goToSlide(currentSlide - 1);
+    }
+
+    function goToSlide(n) {
+        $slides.eq(currentSlide).removeClass('active');
+        $dots.eq(currentSlide).removeClass('active');
+        
+        currentSlide = (n + $slides.length) % $slides.length;
+        
+        $slides.eq(currentSlide).addClass('active');
+        $dots.eq(currentSlide).addClass('active');
+    }
+
+    $('.next').on('click', function() {
+        nextSlide();
+        resetInterval();
+    });
+    
+    $('.prev').on('click', function() {
+        prevSlide();
+        resetInterval();
+    });
+    
+    $('.dot').on('click', function() {
+        goToSlide($(this).index());
+        resetInterval();
+    });
+
+    function resetInterval() {
+        clearInterval(slideInterval);
+        startSlider();
+    }
+
+    startSlider();
+}
+
+// Инициализация фильтров
+function initFilters() {
+    $('.category-btn').on('click', function() {
+        const $this = $(this);
+        const category = $this.data('category');
         const url = new URL(window.location.href);
         
         if (category === 'all') {
@@ -124,8 +241,8 @@ document.querySelectorAll('.category-btn').forEach(btn => {
             url.searchParams.delete('subcategory');
         } else {
             url.searchParams.set('category', category);
-            if (this.dataset.subcategory) {
-                url.searchParams.set('subcategory', this.dataset.subcategory);
+            if ($this.data('subcategory')) {
+                url.searchParams.set('subcategory', $this.data('subcategory'));
             } else {
                 url.searchParams.delete('subcategory');
             }
@@ -133,34 +250,14 @@ document.querySelectorAll('.category-btn').forEach(btn => {
         
         window.location.href = url.toString();
     });
-});
+}
 
-// Инициализация при загрузке
-document.addEventListener('DOMContentLoaded', function() {
-    const urlParams = new URLSearchParams(window.location.search);
-    const currentCategory = urlParams.get('category');
-    
-    // Подсветка активной кнопки
-    document.querySelectorAll('.category-btn').forEach(btn => {
-        btn.classList.remove('active');
-        if ((!currentCategory && btn.dataset.category === 'all') || 
-            btn.dataset.category === currentCategory) {
-            btn.classList.add('active');
-        }
-    });
-    
-    // Показ/скрытие подкатегорий
-    const subcategorySelect = document.querySelector('#subcategory');
-    if (subcategorySelect) {
-        subcategorySelect.style.display = currentCategory === 'weapon' ? 'block' : 'none';
-    }
-});
-
-    // Обработчик добавления в корзину
-    $('.btn-add-to-cart').click(function() {
-        const itemId = $(this).data('item-id');
-        const category = $(this).data('category');
-        const button = $(this);
+// Инициализация корзины
+function initCart() {
+    $('.btn-add-to-cart').on('click', function() {
+        const $btn = $(this);
+        const itemId = $btn.data('item-id');
+        const category = $btn.data('category');
         
         $.ajax({
             url: "{% url 'add_to_cart' 0 %}".replace('0', itemId),
@@ -176,8 +273,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (response.success) {
                     showNotification(response.message);
                     $('.cart-count').text(response.cart_count);
-                    button.addClass('added');
-                    setTimeout(() => button.removeClass('added'), 1000);
+                    $btn.addClass('added');
+                    setTimeout(() => $btn.removeClass('added'), 1000);
                 }
             },
             error: function(xhr) {
@@ -185,14 +282,17 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     });
+}
 
-    // Функция показа уведомлений
-    function showNotification(message, type = 'success') {
-        const notification = $(`<div class="notification ${type}">${message}</div>`);
-        $('body').append(notification);
-        notification.fadeIn();
-        setTimeout(() => notification.fadeOut(() => notification.remove()), 3000);
-    }
-});
+// Функция показа уведомлений
+function showNotification(message, type = 'success') {
+    const $notification = $(`<div class="notification ${type}">${message}</div>`);
+    $('body').append($notification);
+    $notification.fadeIn();
+    setTimeout(() => $notification.fadeOut(() => $notification.remove()), 3000);
+}
+
+// Запускаем инициализацию
+initWhenReady();
 </script>
-{% endblock scripts %}
+{% endblock %}
