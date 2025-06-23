@@ -1,13 +1,13 @@
 from django.urls import path
-from main.views import *
+#from main.views import *
 from . import views
 
 urlpatterns = [
-    path("", IndexListView.as_view(), name="index"),
+    path("", views.IndexListView.as_view(), name="index"),
     path('item/<int:item_id>/', views.item_detail, name='item_detail'),
-    path("catalog/", catalog, name="catalog"),
-    path("all-creaters/", api_get_all_Creaters, name="api_all_creaters"),
-    path('about/', about, name='about'),
+    path("catalog/", views.catalog, name="catalog"),
+    path("all-creaters/", views.api_get_all_Creaters, name="api_all_creaters"),
+    path('about/', views.about, name='about'),
     # Аутентификация
     path('login/', views.login_view, name='login'),
     path('registration/', views.registration, name='registration'),

@@ -23,15 +23,14 @@ from main.models import (
     Accessory, Order
 )
 from django.contrib.contenttypes.models import ContentType
-#ContentType.objects.get_for_model(Helmet)
+ContentType.objects.get_for_model(Helmet)
 
-def index(request):
-    # Получаем параметры фильтрации из GET-запроса
+def catalog(request):
     category = request.GET.get("category")
     subcategory = request.GET.get("subcategory")
     search_query = request.GET.get("search", "")
 
-    # Фильтрация по категории и подкатегории
+    # Определяем, какие модели загружать
     if category == "weapon":
         if subcategory == "assault":
             items = AssaultRifle.objects.all()
@@ -52,10 +51,10 @@ def index(request):
     elif category == "accessory":
         items = Accessory.objects.all()
     else:
-        # Для случая "Все товары" объединяем все модели
-        items = list(Weapon.objects.all()) + \
-                list(Armor.objects.all()) + \
-                list(Accessory.objects.all())
+        # Для главной страницы показываем популярные товары
+        items = list(Weapon.objects.all().order_by('?')[:8]) + \
+                list(Armor.objects.all().order_by('?')[:4]) + \
+                list(Accessory.objects.all().order_by('?')[:4])
 
     # Фильтрация по поисковому запросу
     if search_query:
@@ -69,12 +68,10 @@ def index(request):
         'current_category': category,
         'current_subcategory': subcategory,
     }
-    return render(request, 'index.html', context)
- 
-
-def item_detail(request, item_id):
-    item = get_object_or_404(BaseItem, pk=item_id)
-    return render(request, 'item_detail.html', {'item': item})
+    
+    # Для главной страницы используем index.html, для каталога - catalog.html
+    template_name = 'catalog.html' if request.path == '/catalog/' else 'index.html'
+    return render(request, template_name, context)
 
 class IndexListView(ListView):
     model = Weapon
@@ -86,74 +83,8 @@ def about(request):
     creators = Creater.objects.all()
     return render(request, 'about.html', {'creators': creators})
 
-def catalog(request: HttpRequest):
-    # Получаем параметры фильтрации
-    category = request.GET.get("category")
-    subcategory = request.GET.get("subcategory")
-    creater_id = request.GET.get("creater")
-    price_min = request.GET.get("price_min")
-    price_max = request.GET.get("price_max")
 
-    # Фильтрация по категории и подкатегории
-    if category == "weapon":
-        if subcategory == "assault":
-            items = AssaultRifle.objects.all()
-        elif subcategory == "sniper":
-            items = SniperRifle.objects.all()
-        elif subcategory == "machinegun":
-            items = MachineGun.objects.all()
-        elif subcategory == "shotgun":
-            items = Shotgun.objects.all()
-        elif subcategory == "pistol":
-            items = Pistol.objects.all()
-        elif subcategory == "melee":
-            items = MeleeWeapon.objects.all()
-        else:
-            items = Weapon.objects.all()
-    elif category == "armor":
-        if subcategory == "helmet":
-            items = Helmet.objects.all()
-        elif subcategory == "body":
-            items = BodyArmor.objects.all()
-        elif subcategory == "limb":
-            items = LimbProtection.objects.all()
-        else:
-            items = Armor.objects.all()
-    elif category == "accessory":
-        items = Accessory.objects.all()
-    else:
-        # Для случая "Все товары" используем union всех конкретных моделей
-        items = list(Weapon.objects.all()) + \
-                list(Armor.objects.all()) + \
-                list(Accessory.objects.all())
-
-    # Фильтрация по производителю
-    if creater_id:
-        if isinstance(items, list):
-            items = [item for item in items if item.creator and item.creator.id == int(creater_id)]
-        else:
-            items = items.filter(creator__id=creater_id)
-
-    # Фильтрация по цене
-    if price_min:
-        if isinstance(items, list):
-            items = [item for item in items if item.price >= float(price_min)]
-        else:
-            items = items.filter(price__gte=float(price_min))
-    
-    if price_max:
-        if isinstance(items, list):
-            items = [item for item in items if item.price <= float(price_max)]
-        else:
-            items = items.filter(price__lte=float(price_max))
-
-    context = {
-        'items': items,
-        'creators': Creater.objects.all(),
-        'current_category': category,
-        'current_subcategory': subcategory,
-    }
-    return render(request, "catalog.html", context)
+   
 
    
 
@@ -239,37 +170,20 @@ def add_to_cart(request, item_id):
 
         # Определяем модель по категории
         model_map = {
-            'weapon': [Weapon, AssaultRifle, SniperRifle, MachineGun, Shotgun, MeleeWeapon, Pistol],
-            'armor': [Armor, Helmet, BodyArmor, LimbProtection],
-            'accessory': [Accessory]
+            'weapon': Weapon,
+            'armor': Armor,
+            'accessory': Accessory
         }
 
-        item = None
-        for model in model_map.get(category, []):
-            try:
-                item = model.objects.get(pk=item_id)
-                break
-            except model.DoesNotExist:
-                continue
+        if category not in model_map:
+            raise ValueError("Недопустимая категория товара")
 
-        if not item:
-            raise BaseItem.DoesNotExist("Товар не найден")
-
-        # Проверяем соответствие категории
-        expected_category = None
-        if isinstance(item, (Helmet, BodyArmor, LimbProtection)):
-            expected_category = 'armor'
-        elif isinstance(item, (AssaultRifle, SniperRifle, MachineGun, Shotgun, MeleeWeapon, Pistol)):
-            expected_category = 'weapon'
-        elif isinstance(item, Accessory):
-            expected_category = 'accessory'
-
-        if expected_category and expected_category != category:
-            raise ValueError(f"Несоответствие категории: ожидается {expected_category}, получено {category}")
+        model = model_map[category]
+        item = get_object_or_404(model, pk=item_id)
 
         # Добавляем в корзину
         cart, created = Cart.objects.get_or_create(user=request.user)
-        content_type = ContentType.objects.get_for_model(item.__class__)
+        content_type = ContentType.objects.get_for_model(item)
         
         cart_item, created = CartItem.objects.get_or_create(
             cart=cart,
@@ -295,7 +209,9 @@ def add_to_cart(request, item_id):
             'error': str(e)
         }, status=400)
     
-
+def item_detail(request, item_id):
+    item = get_object_or_404(BaseItem, pk=item_id)
+    return render(request, 'item_detail.html', {'item': item})
 
 # Добавим функцию для AJAX обновления количества
 @login_required

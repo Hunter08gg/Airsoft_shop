@@ -1,11 +1,6 @@
 {% extends "base.html" %}
 
-{% block head %}
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-{% endblock %}
-
-{% block content %}
-
+{% block main %}
     <div class="banner">
         <h1>Каталог страйкбольного снаряжения</h1>
         <p>Лучшее оборудование для тактических игр</p>
@@ -75,70 +70,84 @@
 {% endblock %}
 
 {% block scripts %}
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
-// Проверяем загрузку jQuery
-if (typeof jQuery == 'undefined') {
-    // Если jQuery не загружен, загружаем его динамически
-    var script = document.createElement('script');
-    script.src = "https://code.jquery.com/jquery-3.6.0.min.js";
-    script.onload = initJQuery;
-    document.head.appendChild(script);
-} else {
-    initJQuery();
-}
-
-function initJQuery() {
-    $(document).ready(function() {
-        // 1. Фильтрация по категориям
-        $('.category-btn').off('click').on('click', function() {
-            const $this = $(this);
-            const category = $this.data('category');
-            const subcategory = $this.data('subcategory');
+$(document).ready(function() {
+    // Обработчики кнопок категорий
+    document.querySelectorAll('.category-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const category = this.dataset.category;
+            const subcategory = this.dataset.subcategory;
+            const mainForm = document.getElementById('main-filter');
             
-            $('#category').val(category === 'all' ? '' : category);
-            
-            if (subcategory) {
-                $('#subcategory').val(subcategory);
-            }
-            
-            $('#main-filter').submit();
-        });
-
-        // 2. Обработка добавления в корзину
-        $('.add-to-cart').off('click').on('click', function() {
-            const $btn = $(this);
-            const itemId = $btn.data('item-id');
-            const category = $btn.data('category');
-            
-            $.ajax({
-                url: "{% url 'add_to_cart' 0 %}".replace('0', itemId),
-                method: 'POST',
-                data: {
-                    csrfmiddlewaretoken: '{{ csrf_token }}',
-                    category: category
-                },
-                success: function(response) {
-                    if (response.success) {
-                        $('.cart-count').text(response.cart_count);
-                        $btn.addClass('added');
-                        setTimeout(() => $btn.removeClass('added'), 1000);
-                    }
-                },
-                error: function(xhr) {
-                    console.error('Ошибка:', xhr.responseText);
+            if (category === 'all') {
+                mainForm.querySelector('#category').value = '';
+                if (mainForm.querySelector('#subcategory')) {
+                    mainForm.querySelector('#subcategory').value = '';
                 }
-            });
-        });
-
-        // 3. Инициализация фильтров
-        if ($('#category').val() !== 'weapon') {
-            $('#subcategory').hide();
-        }
-
-        $('#category').change(function() {
-            $('#subcategory').toggle($(this).val() === 'weapon');
+            } else {
+                mainForm.querySelector('#category').value = category;
+                if (subcategory && mainForm.querySelector('#subcategory')) {
+                    mainForm.querySelector('#subcategory').value = subcategory;
+                }
+            }
+            mainForm.submit();
         });
     });
+
+    // Обработчик изменения категории
+    document.querySelector('#category').addEventListener('change', function() {
+        const subcategorySelect = document.querySelector('#subcategory');
+        if (subcategorySelect) {
+            subcategorySelect.style.display = this.value === 'weapon' ? 'block' : 'none';
+        }
+    });
+
+    // Инициализация при загрузке
+    document.addEventListener('DOMContentLoaded', function() {
+        const categorySelect = document.querySelector('#category');
+        const subcategorySelect = document.querySelector('#subcategory');
+        if (categorySelect && subcategorySelect && categorySelect.value !== 'weapon') {
+            subcategorySelect.style.display = 'none';
+        }
+    });
+
+    // Обработчик добавления в корзину
+    $('.add-to-cart').click(function() {
+        const itemId = $(this).data('item-id');
+        const category = $(this).data('category');
+        const button = $(this);
+        
+        $.ajax({
+            url: "{% url 'add_to_cart' 0 %}".replace('0', itemId),
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            data: {
+                'category': category,
+                'csrfmiddlewaretoken': '{{ csrf_token }}'
+            },
+            success: function(response) {
+                if (response.success) {
+                    showNotification(response.message);
+                    $('.cart-count').text(response.cart_count);
+                    button.addClass('added');
+                    setTimeout(() => button.removeClass('added'), 1000);
+                }
+            },
+            error: function(xhr) {
+                showNotification(xhr.responseJSON?.error || 'Ошибка', 'error');
+            }
+        });
+    });
+});
+
+function showNotification(message, type = 'success') {
+    const notification = $(`<div class="notification ${type}">${message}</div>`);
+    $('body').append(notification);
+    notification.fadeIn();
+    setTimeout(() => notification.fadeOut(() => notification.remove()), 3000);
 }
 </script>
 {% endblock %}
