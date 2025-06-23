@@ -6,6 +6,42 @@
         <p>Полный ассортимент страйкбольного оружия и снаряжения</p>
     </div>
 
+    <!-- Форма фильтрации как в catalog.html -->
+    <form class="panel-filter" method="GET" id="main-filter">
+        <div class="filter-group">
+            <label for="category">Категория:</label>
+            <select name="category" id="category">
+                <option value="">Все</option>
+                <option value="weapon" {% if current_category == 'weapon' %}selected{% endif %}>Оружие</option>
+                <option value="armor" {% if current_category == 'armor' %}selected{% endif %}>Броня</option>
+                <option value="accessory" {% if current_category == 'accessory' %}selected{% endif %}>Аксессуары</option>
+            </select>
+        </div>
+
+        {% if current_category == 'weapon' %}
+        <div class="filter-group">
+            <label for="subcategory">Тип оружия:</label>
+            <select name="subcategory" id="subcategory">
+                <option value="">Все</option>
+                <option value="assault" {% if current_subcategory == 'assault' %}selected{% endif %}>Автоматы</option>
+                <option value="sniper" {% if current_subcategory == 'sniper' %}selected{% endif %}>Снайперские</option>
+                <option value="machinegun" {% if current_subcategory == 'machinegun' %}selected{% endif %}>Пулемёты</option>
+                <option value="shotgun" {% if current_subcategory == 'shotgun' %}selected{% endif %}>Дробовики</option>
+                <option value="pistol" {% if current_subcategory == 'pistol' %}selected{% endif %}>Пистолеты</option>
+                <option value="melee" {% if current_subcategory == 'melee' %}selected{% endif %}>Холодное оружие</option>
+            </select>
+        </div>
+        {% endif %}
+
+        <div class="filter-group">
+            <label for="search">Поиск:</label>
+            <input type="text" name="search" id="search" placeholder="Название товара" value="{{ request.GET.search }}">
+        </div>
+
+        <button type="submit" class="btn btn-primary">Применить фильтры</button>
+    </form>
+
+    <!-- Кнопки быстрой фильтрации -->
     <div class="category-filter">
         <button class="category-btn active" data-category="all">Все товары</button>
         <button class="category-btn" data-category="weapon">Оружие</button>
@@ -13,9 +49,11 @@
         <button class="category-btn" data-category="accessory">Аксессуары</button>
     </div>
 
+    <!-- Отображение товаров -->
     <div class="wrap">
         {% for item in items %}
             <div class="card" data-category="{{ item.category }}">
+                <p>ID: {{ item.id }}, Name: {{ item.name }}</p>
                 {% if item.cover_card %}
                     <img src="{{ item.cover_card.url }}" alt="{{ item.name }}" class="card-img">
                 {% else %}
@@ -54,6 +92,11 @@
                             Добавлено: {{ item.date_added|date:"d.m.Y" }}
                         </div>
                         <a href="{% url 'item_detail' item.id %}" class="btn">Подробнее</a>
+                        <button class="btn-add-to-cart" 
+                            data-item-id="{{ item.id }}" 
+                            data-category="{{ item.category|default:'weapon' }}">
+                            В корзину
+                        </button>
                     </div>
                 </div>
             </div>
@@ -66,27 +109,90 @@
 {% endblock main %}
 
 {% block scripts %}
-    <script>
-        // Фильтрация по категориям
-        document.querySelectorAll('.category-btn').forEach(btn => {
-            btn.addEventListener('click', function() {
-                // Удаляем активный класс у всех кнопок
-                document.querySelectorAll('.category-btn').forEach(b => {
-                    b.classList.remove('active');
-                });
-                
-                // Добавляем активный класс текущей кнопке
-                this.classList.add('active');
-                
-                const category = this.dataset.category;
-                document.querySelectorAll('.card').forEach(card => {
-                    if (category === 'all' || card.dataset.category === category) {
-                        card.style.display = 'block';
-                    } else {
-                        card.style.display = 'none';
-                    }
-                });
-            });
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+$(document).ready(function() {
+    // Обработчики кнопок категорий
+    // В блоке scripts index.html обновите обработчик категорий
+document.querySelectorAll('.category-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+        const category = this.dataset.category;
+        const url = new URL(window.location.href);
+        
+        if (category === 'all') {
+            url.searchParams.delete('category');
+            url.searchParams.delete('subcategory');
+        } else {
+            url.searchParams.set('category', category);
+            if (this.dataset.subcategory) {
+                url.searchParams.set('subcategory', this.dataset.subcategory);
+            } else {
+                url.searchParams.delete('subcategory');
+            }
+        }
+        
+        window.location.href = url.toString();
+    });
+});
+
+// Инициализация при загрузке
+document.addEventListener('DOMContentLoaded', function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const currentCategory = urlParams.get('category');
+    
+    // Подсветка активной кнопки
+    document.querySelectorAll('.category-btn').forEach(btn => {
+        btn.classList.remove('active');
+        if ((!currentCategory && btn.dataset.category === 'all') || 
+            btn.dataset.category === currentCategory) {
+            btn.classList.add('active');
+        }
+    });
+    
+    // Показ/скрытие подкатегорий
+    const subcategorySelect = document.querySelector('#subcategory');
+    if (subcategorySelect) {
+        subcategorySelect.style.display = currentCategory === 'weapon' ? 'block' : 'none';
+    }
+});
+
+    // Обработчик добавления в корзину
+    $('.btn-add-to-cart').click(function() {
+        const itemId = $(this).data('item-id');
+        const category = $(this).data('category');
+        const button = $(this);
+        
+        $.ajax({
+            url: "{% url 'add_to_cart' 0 %}".replace('0', itemId),
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            data: {
+                'category': category,
+                'csrfmiddlewaretoken': '{{ csrf_token }}'
+            },
+            success: function(response) {
+                if (response.success) {
+                    showNotification(response.message);
+                    $('.cart-count').text(response.cart_count);
+                    button.addClass('added');
+                    setTimeout(() => button.removeClass('added'), 1000);
+                }
+            },
+            error: function(xhr) {
+                showNotification(xhr.responseJSON?.error || 'Ошибка', 'error');
+            }
         });
-    </script>
+    });
+
+    // Функция показа уведомлений
+    function showNotification(message, type = 'success') {
+        const notification = $(`<div class="notification ${type}">${message}</div>`);
+        $('body').append(notification);
+        notification.fadeIn();
+        setTimeout(() => notification.fadeOut(() => notification.remove()), 3000);
+    }
+});
+</script>
 {% endblock scripts %}

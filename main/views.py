@@ -24,10 +24,53 @@ from main.models import (
 )
 from django.contrib.contenttypes.models import ContentType
 ContentType.objects.get_for_model(Helmet)
+
 def index(request):
-    # Получаем все товары (включая подклассы) с предзагрузкой производителя
-    items = BaseItem.objects.all().select_related('creator')
-    return render(request, 'index.html', {'items': items})
+    # Получаем параметры фильтрации из GET-запроса
+    category = request.GET.get("category")
+    subcategory = request.GET.get("subcategory")
+    search_query = request.GET.get("search", "")
+
+    # Фильтрация по категории и подкатегории
+    if category == "weapon":
+        if subcategory == "assault":
+            items = AssaultRifle.objects.all()
+        elif subcategory == "sniper":
+            items = SniperRifle.objects.all()
+        elif subcategory == "machinegun":
+            items = MachineGun.objects.all()
+        elif subcategory == "shotgun":
+            items = Shotgun.objects.all()
+        elif subcategory == "pistol":
+            items = Pistol.objects.all()
+        elif subcategory == "melee":
+            items = MeleeWeapon.objects.all()
+        else:
+            items = Weapon.objects.all()
+    elif category == "armor":
+        items = Armor.objects.all()
+    elif category == "accessory":
+        items = Accessory.objects.all()
+    else:
+        # Для случая "Все товары" объединяем все модели
+        items = list(Weapon.objects.all()) + \
+                list(Armor.objects.all()) + \
+                list(Accessory.objects.all())
+
+    # Фильтрация по поисковому запросу
+    if search_query:
+        if isinstance(items, list):
+            items = [item for item in items if search_query.lower() in item.name.lower()]
+        else:
+            items = items.filter(name__icontains=search_query)
+
+    context = {
+        'items': items,
+        'current_category': category,
+        'current_subcategory': subcategory,
+    }
+    return render(request, 'index.html', context)
+ 
 
 def item_detail(request, item_id):
     item = get_object_or_404(BaseItem, pk=item_id)
