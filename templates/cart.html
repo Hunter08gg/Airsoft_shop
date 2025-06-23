@@ -48,7 +48,27 @@
 
 {% block scripts %}
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
 <script>
+// Правильное объявление функции с именем
+function showNotification(message, type = 'success') {
+    const notification = $('<div class="notification ' + type + '">' + message + '</div>');
+    $('body').append(notification);
+    notification.fadeIn();
+    setTimeout(function() {
+        notification.fadeOut(function() {
+            $(this).remove();
+        });
+    }, 3000);
+}
+
+// Функция для обновления счетчика корзины
+function updateCartCount() {
+    $.get("{% url 'cart_count' %}", function(data) {
+        $('.cart-count').text(data.count);
+    });
+}
+
 $(document).ready(function() {
     // Обработка изменения количества
     $('.quantity-btn').click(function() {
@@ -65,7 +85,7 @@ $(document).ready(function() {
         }
         
         $.ajax({
-            url: '/cart/update/' + itemId + '/',
+            url: "{% url 'update_cart_item_ajax' 0 %}".replace('0', itemId),
             method: 'POST',
             data: {
                 'quantity': quantity,
@@ -73,22 +93,17 @@ $(document).ready(function() {
             },
             success: function(response) {
                 if (response.success) {
-                    if (response.deleted) {
-                        cartItem.remove();
-                    } else {
-                        quantityElement.text(response.quantity);
-                        cartItem.find('.total-price').text('Всего: ' + response.item_total + ' ₽');
-                        $('.cart-summary h3').text('Итого: ' + response.cart_total + ' ₽');
-                    }
-                    
-                    // Обновляем счетчик корзины в header
+                    quantityElement.text(response.quantity);
+                    cartItem.find('.total-price').text('Всего: ' + response.item_total + ' ₽');
+                    $('.cart-summary h3').text('Итого: ' + response.cart_total + ' ₽');
                     updateCartCount();
                 }
             }
         });
     });
     
-    $('.cart-container').on('click', '.remove-item', function() {
+    // Обработчик удаления товара
+    $('.remove-item').click(function() {
         const itemId = $(this).data('item-id');
         const cartItem = $(this).closest('.cart-item');
         
@@ -100,21 +115,13 @@ $(document).ready(function() {
             },
             success: function(response) {
                 if (response.success) {
-                    // Удаляем элемент из DOM
                     cartItem.remove();
-                    
-                    // Обновляем итоговую сумму
                     $('.cart-summary h3').text('Итого: ' + response.cart_total + ' ₽');
-                    
-                    // Обновляем счетчик корзины в шапке
-                    $('.cart-count').text(response.cart_count);
-                    
-                    // Показываем уведомление
+                    updateCartCount();
                     showNotification(response.message);
                     
-                    // Если корзина пуста, показываем сообщение
                     if ($('.cart-item').length === 0) {
-                        $('.cart-items').html('<p class="empty-cart">Ваша корзина пуста</p>');
+                        $('.cart-items').html('<div class="empty-cart"><p>Ваша корзина пуста</p><a href="{% url "catalog" %}" class="btn">Перейти в каталог</a></div>');
                     }
                 }
             },
@@ -123,13 +130,6 @@ $(document).ready(function() {
             }
         });
     });
-    
-    // Функция для обновления счетчика корзины
-    function updateCartCount() {
-        $.get('/cart/count/', function(data) {
-            $('.cart-count').text(data.count);
-        });
-    }
 });
 </script>
 {% endblock %}

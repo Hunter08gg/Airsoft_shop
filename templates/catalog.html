@@ -57,109 +57,97 @@
             <h3>{{ item.name }}</h3>
             <p class="price">{{ item.price }} руб.</p>
             <p class="description">{{ item.description|truncatechars:100 }}</p>
-            <button class="add-to-cart" data-item-id="{{ item.id }}">
-    В корзину
-    <span class="cart-icon">🛒</span>
-</button>
-        </div>
-        {% empty %}
-        <p class="no-items">Товары не найдены</p>
-        {% endfor %}
+            <button class="add-to-cart" 
+                data-item-id="{{ item.id }}" 
+                data-category="{% if item.category %}{{ item.category }}{% else %}weapon{% endif %}">
+            В корзину
+        </button>
     </div>
+    {% empty %}
+    <p class="no-items">Товары не найдены</p>
+    {% endfor %}
+</div>
 {% endblock %}
 
 {% block scripts %}
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script>
-        document.querySelectorAll('.category-btn').forEach(btn => {
-            btn.addEventListener('click', function() {
-                const category = this.dataset.category;
-                const subcategory = this.dataset.subcategory;
-                const mainForm = document.getElementById('main-filter');
-                
-                if (category === 'all') {
-                    mainForm.querySelector('#category').value = '';
-                    if (mainForm.querySelector('#subcategory')) {
-                        mainForm.querySelector('#subcategory').value = '';
-                    }
-                } else {
-                    mainForm.querySelector('#category').value = category;
-                    if (subcategory && mainForm.querySelector('#subcategory')) {
-                        mainForm.querySelector('#subcategory').value = subcategory;
-                    }
-                }
-                
-                mainForm.submit();
-            });
-        });
-
-        document.querySelector('#category').addEventListener('change', function() {
-            const subcategorySelect = document.querySelector('#subcategory');
-            if (subcategorySelect) {
-                if (this.value === 'weapon') {
-                    subcategorySelect.style.display = 'block';
-                } else {
-                    subcategorySelect.style.display = 'none';
-                }
-            }
-        });
-
-        document.addEventListener('DOMContentLoaded', function() {
-            const categorySelect = document.querySelector('#category');
-            const subcategorySelect = document.querySelector('#subcategory');
-            
-            if (categorySelect && subcategorySelect) {
-                if (categorySelect.value !== 'weapon') {
-                    subcategorySelect.style.display = 'none';
-                }
-            }
-        });
-    </script>
-        <script>
+<script>
 $(document).ready(function() {
-        $('.add-to-cart').click(function() {
+    // Обработчики кнопок категорий
+    document.querySelectorAll('.category-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const category = this.dataset.category;
+            const subcategory = this.dataset.subcategory;
+            const mainForm = document.getElementById('main-filter');
+            
+            if (category === 'all') {
+                mainForm.querySelector('#category').value = '';
+                if (mainForm.querySelector('#subcategory')) {
+                    mainForm.querySelector('#subcategory').value = '';
+                }
+            } else {
+                mainForm.querySelector('#category').value = category;
+                if (subcategory && mainForm.querySelector('#subcategory')) {
+                    mainForm.querySelector('#subcategory').value = subcategory;
+                }
+            }
+            mainForm.submit();
+        });
+    });
+
+    // Обработчик изменения категории
+    document.querySelector('#category').addEventListener('change', function() {
+        const subcategorySelect = document.querySelector('#subcategory');
+        if (subcategorySelect) {
+            subcategorySelect.style.display = this.value === 'weapon' ? 'block' : 'none';
+        }
+    });
+
+    // Инициализация при загрузке
+    document.addEventListener('DOMContentLoaded', function() {
+        const categorySelect = document.querySelector('#category');
+        const subcategorySelect = document.querySelector('#subcategory');
+        if (categorySelect && subcategorySelect && categorySelect.value !== 'weapon') {
+            subcategorySelect.style.display = 'none';
+        }
+    });
+
+    // Обработчик добавления в корзину
+    $('.add-to-cart').click(function() {
         const itemId = $(this).data('item-id');
+        const category = $(this).data('category');
         const button = $(this);
         
         $.ajax({
             url: "{% url 'add_to_cart' 0 %}".replace('0', itemId),
             method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
             data: {
+                'category': category,
                 'csrfmiddlewaretoken': '{{ csrf_token }}'
             },
             success: function(response) {
                 if (response.success) {
-                    // Показываем уведомление
                     showNotification(response.message);
-                    
-                    // Обновляем счетчик корзины
                     $('.cart-count').text(response.cart_count);
-                    
-                    // Анимация кнопки
                     button.addClass('added');
-                    setTimeout(function() {
-                        button.removeClass('added');
-                    }, 1000);
+                    setTimeout(() => button.removeClass('added'), 1000);
                 }
             },
             error: function(xhr) {
-                const error = xhr.responseJSON.error || 'Произошла ошибка';
-                showNotification(error, 'error');
+                showNotification(xhr.responseJSON?.error || 'Ошибка', 'error');
             }
         });
     });
-    
-    function showNotification(message, type = 'success') {
-        const notification = $('<div class="notification ' + type + '">' + message + '</div>');
-        $('body').append(notification);
-        notification.fadeIn();
-        setTimeout(function() {
-            notification.fadeOut(function() {
-                $(this).remove();
-            });
-        }, 3000);
-    }
 });
 
-    </script>
+function showNotification(message, type = 'success') {
+    const notification = $(`<div class="notification ${type}">${message}</div>`);
+    $('body').append(notification);
+    notification.fadeIn();
+    setTimeout(() => notification.fadeOut(() => notification.remove()), 3000);
+}
+</script>
 {% endblock %}

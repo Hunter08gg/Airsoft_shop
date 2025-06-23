@@ -1,5 +1,9 @@
+import json
+from venv import logger
+from itertools import chain
 from django.shortcuts import render, redirect, get_object_or_404
 from django.db import transaction
+import logging
 from django.contrib import messages
 from django.views.generic import ListView
 from django.contrib.auth import login as auth_login, logout as auth_logout
@@ -18,6 +22,8 @@ from main.models import (
     Armor, Helmet, BodyArmor, LimbProtection,
     Accessory, Order
 )
+from django.contrib.contenttypes.models import ContentType
+ContentType.objects.get_for_model(Helmet)
 def index(request):
     # Получаем все товары (включая подклассы) с предзагрузкой производителя
     items = BaseItem.objects.all().select_related('creator')
@@ -62,12 +68,21 @@ def catalog(request: HttpRequest):
         else:
             items = Weapon.objects.all()
     elif category == "armor":
-        items = Armor.objects.all()
+        if subcategory == "helmet":
+            items = Helmet.objects.all()
+        elif subcategory == "body":
+            items = BodyArmor.objects.all()
+        elif subcategory == "limb":
+            items = LimbProtection.objects.all()
+        else:
+            items = Armor.objects.all()
     elif category == "accessory":
         items = Accessory.objects.all()
     else:
-        # Если категория не указана, показываем все товары
-        items = list(Weapon.objects.all()) + list(Armor.objects.all()) + list(Accessory.objects.all())
+        # Для случая "Все товары" используем union всех конкретных моделей
+        items = list(Weapon.objects.all()) + \
+                list(Armor.objects.all()) + \
+                list(Accessory.objects.all())
 
     # Фильтрация по производителю
     if creater_id:
@@ -89,22 +104,15 @@ def catalog(request: HttpRequest):
         else:
             items = items.filter(price__lte=float(price_max))
 
-    # Получаем всех производителей для фильтра
-    creators = Creater.objects.all()
-
     context = {
         'items': items,
-        'creators': creators,
+        'creators': Creater.objects.all(),
         'current_category': category,
         'current_subcategory': subcategory,
     }
     return render(request, "catalog.html", context)
 
-    context = {
-        'items': items,
-        'creators': creators,
-    }
-    return render(request, "catalog.html", context)
+   
 
 def api_get_all_Creaters(request):
     creators = Creater.objects.all()
@@ -176,31 +184,50 @@ def cart_view(request):
         'total_price': total_price
     })
 
-# Обновим функцию add_to_cart
 @login_required
 def add_to_cart(request, item_id):
     try:
-        # Ищем товар во всех возможных моделях
+        # Получаем данные из запроса
+        if request.headers.get('Content-Type') == 'application/json':
+            data = json.loads(request.body)
+            category = data.get('category')
+        else:
+            category = request.POST.get('category')
+
+        # Определяем модель по категории
+        model_map = {
+            'weapon': [Weapon, AssaultRifle, SniperRifle, MachineGun, Shotgun, MeleeWeapon, Pistol],
+            'armor': [Armor, Helmet, BodyArmor, LimbProtection],
+            'accessory': [Accessory]
+        }
+
         item = None
-        for model in [Weapon, AssaultRifle, SniperRifle, MachineGun, Shotgun, 
-                     MeleeWeapon, Pistol, Armor, Helmet, BodyArmor, 
-                     LimbProtection, Accessory]:
+        for model in model_map.get(category, []):
             try:
                 item = model.objects.get(pk=item_id)
                 break
             except model.DoesNotExist:
                 continue
-        
+
         if not item:
             raise BaseItem.DoesNotExist("Товар не найден")
 
-        # Получаем корзину пользователя или создаем новую
+        # Проверяем соответствие категории
+        expected_category = None
+        if isinstance(item, (Helmet, BodyArmor, LimbProtection)):
+            expected_category = 'armor'
+        elif isinstance(item, (AssaultRifle, SniperRifle, MachineGun, Shotgun, MeleeWeapon, Pistol)):
+            expected_category = 'weapon'
+        elif isinstance(item, Accessory):
+            expected_category = 'accessory'
+
+        if expected_category and expected_category != category:
+            raise ValueError(f"Несоответствие категории: ожидается {expected_category}, получено {category}")
+
+        # Добавляем в корзину
         cart, created = Cart.objects.get_or_create(user=request.user)
+        content_type = ContentType.objects.get_for_model(item.__class__)
         
-        # Получаем ContentType для конкретного класса товара
-        content_type = ContentType.objects.get_for_model(item)
-        
-        # Ищем такой товар в корзине
         cart_item, created = CartItem.objects.get_or_create(
             cart=cart,
             content_type=content_type,
@@ -211,22 +238,21 @@ def add_to_cart(request, item_id):
         if not created:
             cart_item.quantity += 1
             cart_item.save()
-        
-        messages.success(request, f"Товар {item.name} добавлен в корзину")
-        
-        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-            return JsonResponse({
-                'success': True,
-                'message': f"Товар {item.name} добавлен в корзину",
-                'cart_count': cart.items.count()
-            })
-        return redirect(request.META.get('HTTP_REFERER', 'catalog'))
+
+        return JsonResponse({
+            'success': True,
+            'message': f"Товар {item.name} добавлен в корзину",
+            'cart_count': cart.items.count()
+        })
             
     except Exception as e:
-        messages.error(request, f"Ошибка: {str(e)}")
-        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-            return JsonResponse({'success': False, 'error': str(e)}, status=400)
-        return redirect('catalog')
+        logger.error(f"Ошибка добавления в корзину: {str(e)}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=400)
+    
+
 
 # Добавим функцию для AJAX обновления количества
 @login_required
@@ -366,3 +392,11 @@ def cart_total(request):
         total = 0
     
     return JsonResponse({'total': total})
+
+def get_item_category(item):
+    if isinstance(item, (Helmet, BodyArmor, LimbProtection)):
+        return 'armor'
+    elif isinstance(item, (AssaultRifle, SniperRifle, ...)):
+        return 'weapon'
+    
+    

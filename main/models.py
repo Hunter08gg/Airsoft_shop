@@ -159,6 +159,7 @@ class Helmet(Armor):
     class Meta:
         verbose_name = "Каска"
         verbose_name_plural = "Каски"
+        abstract = False
 
 class BodyArmor(Armor):
     armor_type = models.CharField("Тип брони", max_length=50)
