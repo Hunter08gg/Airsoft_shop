@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block main %}
+    <h1>Детали заказа #{{ order.id }}</h1>
+    
+    <div class="order-info">
+        <p><strong>Дата:</strong> {{ order.created_at|date:"d.m.Y H:i" }}</p>
+        <p><strong>Статус:</strong> {{ order.get_status_display }}</p>
+        <p><strong>Адрес доставки:</strong> {{ order.address }}</p>
+        <p><strong>Телефон:</strong> {{ order.phone }}</p>
+        <p><strong>Комментарий:</strong> {{ order.comments|default:"-" }}</p>
+        <p><strong>Общая сумма:</strong> {{ order.total_price }} ₽</p>
+    </div>
+    
+    <h2>Товары в заказе</h2>
+    <table class="order-items">
+        <thead>
+            <tr>
+                <th>Товар</th>
+                <th>Количество</th>
+                <th>Цена</th>
+                <th>Сумма</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in order.items.all %}
+                <tr>
+                    <td>{{ item.item.name }}</td>
+                    <td>{{ item.quantity }}</td>
+                    <td>{{ item.item.price }} ₽</td>
+                    <td>{{ item.total_price }} ₽</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    
+    <a href="{% url 'account' user.id %}" class="btn btn-back">Назад в личный кабинет</a>
+    
+    
+{% endblock main %}

@@ -134,7 +134,28 @@ def logout_view(request):
 def account(request, user_id):
     user = get_object_or_404(User, pk=user_id)
     profile = get_object_or_404(Profile, user=user)
-    return render(request, 'account.html', {'user': user, 'profile': profile})
+    orders = Order.objects.filter(user=user).order_by('-created_at')
+    return render(request, 'account.html', {
+        'user': user,
+        'profile': profile,
+        'orders': orders
+    })
+
+@login_required
+def order_detail(request, order_id):
+    order = get_object_or_404(Order, pk=order_id, user=request.user)
+    return render(request, 'order_detail.html', {'order': order})
+
+@login_required
+def delete_order(request, order_id):
+    order = get_object_or_404(Order, pk=order_id, user=request.user)
+    if request.method == 'POST':
+        order.delete()
+        messages.success(request, f"Заказ #{order_id} успешно удален")
+        return redirect('account', user_id=request.user.id)
+    return redirect('account', user_id=request.user.id)
+
+logger = logging.getLogger(__name__)
 
 @login_required
 def cart_view(request):
@@ -422,10 +443,3 @@ def get_item_category(item):
     elif isinstance(item, (AssaultRifle, SniperRifle, ...)):
         return 'weapon'
     
-@login_required
-def order_detail(request, order_id):
-    order = get_object_or_404(Order, pk=order_id, user=request.user)
-    return render(request, 'order_detail.html', {'order': order})
-
-
-logger = logging.getLogger(__name__)
