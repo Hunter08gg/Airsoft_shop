@@ -4,6 +4,7 @@ from itertools import chain
 from django.shortcuts import render, redirect, get_object_or_404
 from django.db import transaction
 import logging
+from django.http import Http404
 from .forms import CustomUserCreationForm, CustomAuthenticationForm
 from django.views.generic import ListView
 from django.contrib.auth import login as auth_login, logout as auth_logout
@@ -216,10 +217,29 @@ def add_to_cart(request, item_id):
             'error': str(e)
         }, status=400)
     
-    
+
+
 def item_detail(request, item_id):
-    item = get_object_or_404(BaseItem, pk=item_id)
-    return render(request, 'item_detail.html', {'item': item})
+    # Список всех моделей, в которых могут храниться товары
+    item_models = [
+        Weapon, AssaultRifle, SniperRifle, MachineGun, Shotgun, MeleeWeapon, Pistol,
+        Armor, Helmet, BodyArmor, LimbProtection,
+        Accessory
+    ]
+    
+    item = None
+    # Пробуем найти товар в каждой из моделей
+    for model in item_models:
+        try:
+            item = model.objects.get(pk=item_id)
+            break
+        except model.DoesNotExist:
+            continue
+    
+    if item is None:
+        raise Http404("Товар не найден")
+    
+    return render(request, 'index.html', {'item': item})
 
 # Добавим функцию для AJAX обновления количества
 @login_required
