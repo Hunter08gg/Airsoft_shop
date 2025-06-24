@@ -117,26 +117,6 @@ def registration(request):
         'title': 'Регистрация'
     })
 
-def login_view(request):
-    if request.method == 'POST':
-        form = CustomAuthenticationForm(request, data=request.POST)
-        if form.is_valid():
-            user = form.get_user()
-            auth_login(request, user)
-            
-            if not form.cleaned_data.get('remember_me'):
-                request.session.set_expiry(0)  # Сессия закончится при закрытии браузера
-                
-            messages.success(request, f"Добро пожаловать, {user.username}!")
-            return redirect('index')
-    else:
-        form = CustomAuthenticationForm()
-    
-    return render(request, 'login.html', {
-        'form': form,
-        'title': 'Вход'
-    })
-
 @login_required
 def logout_view(request):
     auth_logout(request)
@@ -229,6 +209,7 @@ def add_to_cart(request, item_id):
             'success': False,
             'error': str(e)
         }, status=400)
+    
     
 def item_detail(request, item_id):
     item = get_object_or_404(BaseItem, pk=item_id)

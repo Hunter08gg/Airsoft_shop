@@ -144,6 +144,14 @@
         document.addEventListener('cartUpdated', function(e) {
             updateCartCount(e.detail.count);
         });
+
+        window.addEventListener('error', function(event) {
+    console.error('Global error:', event.error);
+});
+
+window.addEventListener('unhandledrejection', function(event) {
+    console.error('Unhandled rejection:', event.reason);
+});
     </script>
     {% block scripts %}{% endblock scripts %}
 </body>
