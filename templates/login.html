@@ -1,11 +1,35 @@
 {% extends "base.html" %}
 
 {% block main %}
-    <h1>Войти</h1>
-
+<div class="auth-form">
+    <h1>Вход</h1>
+    
     <form method="post">
         {% csrf_token %}
-        {{ form }}
-        <input type="submit" value="Войти">
+        
+        {% for field in form %}
+            {% if field.name != 'remember_me' %}
+                <div class="form-group">
+                    {{ field.label_tag }}
+                    {{ field }}
+                    
+                    {% if field.errors %}
+                        <div class="error">{{ field.errors }}</div>
+                    {% endif %}
+                </div>
+            {% endif %}
+        {% endfor %}
+        
+        <div class="form-group remember-me">
+            {{ form.remember_me.label_tag }}
+            {{ form.remember_me }}
+        </div>
+        
+        <button type="submit" class="btn btn-primary">Войти</button>
     </form>
+    
+    <div class="auth-links">
+        Нет аккаунта? <a href="{% url 'registration' %}">Зарегистрироваться</a>
+    </div>
+</div>
 {% endblock main %}

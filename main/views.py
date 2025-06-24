@@ -4,7 +4,7 @@ from itertools import chain
 from django.shortcuts import render, redirect, get_object_or_404
 from django.db import transaction
 import logging
-from django.contrib import messages
+from .forms import CustomUserCreationForm, CustomAuthenticationForm
 from django.views.generic import ListView
 from django.contrib.auth import login as auth_login, logout as auth_logout
 from django.contrib.auth.decorators import login_required
@@ -84,9 +84,6 @@ def about(request):
     return render(request, 'about.html', {'creators': creators})
 
 
-   
-
-   
 
 def api_get_all_Creaters(request):
     creators = Creater.objects.all()
@@ -106,20 +103,44 @@ def login_view(request):
 
 def registration(request):
     if request.method == 'POST':
-        form = UserCreationForm(request.POST)
+        form = CustomUserCreationForm(request.POST, request.FILES)
         if form.is_valid():
             user = form.save()
-            # Создаем профиль для нового пользователя
-            Profile.objects.create(user=user)
             auth_login(request, user)
+            messages.success(request, "Регистрация прошла успешно!")
             return redirect('index')
     else:
-        form = UserCreationForm()
-    return render(request, 'registration.html', {'form': form})
+        form = CustomUserCreationForm()
+    
+    return render(request, 'registration.html', {
+        'form': form,
+        'title': 'Регистрация'
+    })
+
+def login_view(request):
+    if request.method == 'POST':
+        form = CustomAuthenticationForm(request, data=request.POST)
+        if form.is_valid():
+            user = form.get_user()
+            auth_login(request, user)
+            
+            if not form.cleaned_data.get('remember_me'):
+                request.session.set_expiry(0)  # Сессия закончится при закрытии браузера
+                
+            messages.success(request, f"Добро пожаловать, {user.username}!")
+            return redirect('index')
+    else:
+        form = CustomAuthenticationForm()
+    
+    return render(request, 'login.html', {
+        'form': form,
+        'title': 'Вход'
+    })
 
 @login_required
 def logout_view(request):
     auth_logout(request)
+    messages.info(request, "Вы успешно вышли из системы.")
     return redirect('index')
 
 @login_required
