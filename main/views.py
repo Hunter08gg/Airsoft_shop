@@ -336,26 +336,46 @@ def checkout(request):
         return redirect('cart')
     
     if request.method == 'POST':
-        # Создаем заказ
-        total_price = sum(item.total_price for item in cart.items.all())
-        order = Order.objects.create(
-            user=request.user,
-            total_price=total_price
-        )
-        order.items.set(cart.items.all())
-        
-        # Очищаем корзину
-        cart.items.all().delete()
-        
-        messages.success(request, "Ваш заказ успешно оформлен!")
-        return redirect('order_detail', order_id=order.id)
+        try:
+            # Получаем данные из формы
+            address = request.POST.get('address')
+            phone = request.POST.get('phone')
+            comments = request.POST.get('comments', '')
+            
+            # Создаем заказ
+            total_price = sum(item.quantity * item.item.price for item in cart.items.all())
+            
+            with transaction.atomic():
+                order = Order.objects.create(
+                    user=request.user,
+                    total_price=total_price,
+                    address=address,
+                    phone=phone,
+                    comments=comments
+                )
+                
+                # Добавляем товары в заказ
+                for cart_item in cart.items.all():
+                    order.items.add(cart_item)
+                
+                # Очищаем корзину
+                cart.items.all().delete()
+            
+            messages.success(request, "Ваш заказ успешно оформлен!")
+            return redirect('account', user_id=request.user.id)  # Перенаправляем в личный кабинет
+            
+        except Exception as e:
+            logger.error(f"Ошибка при оформлении заказа: {str(e)}")
+            messages.error(request, "Произошла ошибка при оформлении заказа")
+            return redirect('checkout')
     
-    total_price = sum(item.total_price for item in cart.items.all())
+    # Рассчитываем общую сумму
+    total_price = sum(item.quantity * item.item.price for item in cart.items.all())
+    
     return render(request, 'checkout.html', {
         'cart': cart,
         'total_price': total_price
     })
-
 @login_required
 def cart_count(request):
     try:
@@ -386,4 +406,7 @@ def get_item_category(item):
     elif isinstance(item, (AssaultRifle, SniperRifle, ...)):
         return 'weapon'
     
-    
+@login_required
+def order_detail(request, order_id):
+    order = get_object_or_404(Order, pk=order_id, user=request.user)
+    return render(request, 'order_detail.html', {'order': order})

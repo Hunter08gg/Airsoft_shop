@@ -212,19 +212,23 @@ class CartItem(models.Model):
         return f"{self.quantity} x {self.item.name}"
 
     @property
-    def total_price(self):
-        return self.item.price * self.quantity
+    def item(self):
+        return self.content_type.get_object_for_this_type(pk=self.object_id)
     
 class Order(models.Model):
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
     items = models.ManyToManyField(CartItem)
     total_price = models.DecimalField(max_digits=10, decimal_places=2)
+    address = models.TextField()
+    phone = models.CharField(max_length=20)
+    comments = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
-    status = models.CharField(max_length=20, default='pending', choices=[
-        ('pending', 'Ожидает обработки'),
-        ('completed', 'Завершен'),
-        ('cancelled', 'Отменен')
-    ])
-
+    status = models.CharField(max_length=20, default='processing', choices=(
+        ('processing', 'В обработке'),
+        ('shipped', 'Отправлен'),
+        ('delivered', 'Доставлен'),
+        ('cancelled', 'Отменен'),
+    ))
+    
     def __str__(self):
         return f"Заказ #{self.id} - {self.user.username}"
