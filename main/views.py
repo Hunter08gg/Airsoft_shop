@@ -51,10 +51,16 @@ def catalog(request):
     elif category == "accessory":
         items = Accessory.objects.all()
     else:
-        # Для главной страницы показываем популярные товары
-        items = list(Weapon.objects.all().order_by('?')[:8]) + \
-                list(Armor.objects.all().order_by('?')[:4]) + \
-                list(Accessory.objects.all().order_by('?')[:4])
+        # Если это главная страница и нет фильтров, показываем популярные товары
+        if request.path == '/':
+            items = list(Weapon.objects.all().order_by('?')[:8]) + \
+                    list(Armor.objects.all().order_by('?')[:4]) + \
+                    list(Accessory.objects.all().order_by('?')[:4])
+        else:
+            # Если это каталог без фильтров, показываем все товары
+            items = list(Weapon.objects.all()) + \
+                    list(Armor.objects.all()) + \
+                    list(Accessory.objects.all())
 
     # Фильтрация по поисковому запросу
     if search_query:
