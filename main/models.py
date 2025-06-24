@@ -213,22 +213,38 @@ class CartItem(models.Model):
 
     @property
     def item(self):
-        return self.content_type.get_object_for_this_type(pk=self.object_id)
+        try:
+            return self.content_type.get_object_for_this_type(pk=self.object_id)
+        except:
+            return None
+    
+    @property
+    def total_price(self):
+        if self.item:
+            return self.quantity * self.item.price
+        return 0
     
 class Order(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
-    items = models.ManyToManyField(CartItem)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='orders')
+    items = models.ManyToManyField(CartItem, related_name='orders')
     total_price = models.DecimalField(max_digits=10, decimal_places=2)
-    address = models.TextField()
-    phone = models.CharField(max_length=20)
+    address = models.TextField(default="")
+    phone = models.CharField(max_length=20, default="8-800-555-35-55")
     comments = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
-    status = models.CharField(max_length=20, default='processing', choices=(
-        ('processing', 'В обработке'),
-        ('shipped', 'Отправлен'),
-        ('delivered', 'Доставлен'),
-        ('cancelled', 'Отменен'),
-    ))
+    status = models.CharField(
+        max_length=20,
+        default='processing',
+        choices=[
+            ('processing', 'В обработке'),
+            ('shipped', 'Отправлен'),
+            ('delivered', 'Доставлен'),
+            ('cancelled', 'Отменен'),
+        ]
+    )
+    
+    class Meta:
+        ordering = ['-created_at']
     
     def __str__(self):
-        return f"Заказ #{self.id} - {self.user.username}"
+        return f"Заказ #{self.id} ({self.user.username})"

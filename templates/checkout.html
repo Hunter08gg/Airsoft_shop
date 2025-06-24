@@ -3,32 +3,51 @@
 {% block main %}
 <div class="checkout-container">
     <h2>Оформление заказа</h2>
+    
+    {% if messages %}
+    <div class="messages">
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }}">
+            {{ message }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    
     <div class="order-summary">
         <h3>Ваш заказ</h3>
         {% for cart_item in cart.items.all %}
+            {% if cart_item.item %}
             <div class="checkout-item">
-                <p>{{ cart_item.item.name }} - {{ cart_item.quantity }} × {{ cart_item.item.price }} ₽</p>
-                <p>Итого: {{ cart_item.quantity|floatformat:2 }} ₽</p>
+                <span>{{ cart_item.item.name }}</span>
+                <span>{{ cart_item.quantity }} × {{ cart_item.item.price }} ₽</span>
+                <span>{{ cart_item.total_price }} ₽</span>
             </div>
+            {% endif %}
         {% endfor %}
         <hr>
-        <h4>Общая сумма: {{ total_price }} ₽</h4>
+        <div class="total-price">
+            <h4>Общая сумма: {{ total_price }} ₽</h4>
+        </div>
     </div>
     
     <form method="post" class="checkout-form">
         {% csrf_token %}
         <div class="form-group">
-            <label for="address">Адрес доставки:</label>
+            <label for="address">Адрес доставки *</label>
             <input type="text" id="address" name="address" required>
         </div>
+        
         <div class="form-group">
-            <label for="phone">Телефон:</label>
+            <label for="phone">Телефон *</label>
             <input type="tel" id="phone" name="phone" required>
         </div>
+        
         <div class="form-group">
-            <label for="comments">Комментарии к заказу:</label>
-            <textarea id="comments" name="comments"></textarea>
+            <label for="comments">Комментарий к заказу</label>
+            <textarea id="comments" name="comments" rows="3"></textarea>
         </div>
+        
         <button type="submit" class="btn btn-primary">Подтвердить заказ</button>
     </form>
 </div>

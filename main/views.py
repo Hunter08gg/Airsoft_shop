@@ -337,13 +337,18 @@ def checkout(request):
     
     if request.method == 'POST':
         try:
-            # Получаем данные из формы
-            address = request.POST.get('address')
-            phone = request.POST.get('phone')
-            comments = request.POST.get('comments', '')
+            address = request.POST.get('address', '').strip()
+            phone = request.POST.get('phone', '').strip()
             
-            # Создаем заказ
-            total_price = sum(item.quantity * item.item.price for item in cart.items.all())
+            if not address or not phone:
+                messages.error(request, "Пожалуйста, заполните все обязательные поля")
+                return redirect('checkout')
+            
+            # Исправленный расчет общей суммы
+            total_price = 0
+            for cart_item in cart.items.all():
+                if hasattr(cart_item, 'item') and cart_item.item:  # Проверка!
+                    total_price += cart_item.quantity * cart_item.item.price  # Доступ через item
             
             with transaction.atomic():
                 order = Order.objects.create(
@@ -351,23 +356,34 @@ def checkout(request):
                     total_price=total_price,
                     address=address,
                     phone=phone,
-                    comments=comments
+                    comments=request.POST.get('comments', '')
                 )
                 
-                # Добавляем товары в заказ
                 for cart_item in cart.items.all():
                     order.items.add(cart_item)
                 
-                # Очищаем корзину
-                cart.items.all().delete()
+                # Переносим товары в заказ, не удаляя их
+                order.items.set(cart.items.all())
+                cart.items.all().delete()  # Очищаем корзину     
             
-            messages.success(request, "Ваш заказ успешно оформлен!")
-            return redirect('account', user_id=request.user.id)  # Перенаправляем в личный кабинет
+            messages.success(request, f"Заказ #{order.id} успешно оформлен!")
+            return redirect('account', user_id=request.user.id)
             
         except Exception as e:
-            logger.error(f"Ошибка при оформлении заказа: {str(e)}")
-            messages.error(request, "Произошла ошибка при оформлении заказа")
+            logger.error(f"Ошибка оформления заказа: {str(e)}", exc_info=True)
+            messages.error(request, f"Произошла ошибка: {str(e)}")
             return redirect('checkout')
+    
+    # Исправленный расчет для GET-запроса
+    total_price = 0
+    for cart_item in cart.items.all():
+        if hasattr(cart_item, 'item') and cart_item.item:  # Проверка!
+            total_price += cart_item.quantity * cart_item.item.price  # Доступ через item
+    
+    return render(request, 'checkout.html', {
+        'cart': cart,
+        'total_price': total_price
+    })
     
     # Рассчитываем общую сумму
     total_price = sum(item.quantity * item.item.price for item in cart.items.all())
@@ -410,3 +426,6 @@ def get_item_category(item):
 def order_detail(request, order_id):
     order = get_object_or_404(Order, pk=order_id, user=request.user)
     return render(request, 'order_detail.html', {'order': order})
+
+
+logger = logging.getLogger(__name__)
