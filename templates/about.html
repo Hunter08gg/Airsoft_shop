@@ -1,61 +1,110 @@
 {% extends "base.html" %}
+{% load static %}
 
 {% block main %}
 <div class="about-page">
-    <div class="about-banner">
-        <h1>О нашем магазине</h1>
-        <p>Ваш надежный партнер в мире страйкбольного снаряжения с 2010 года</p>
+    <div class="about-banner" style="background-image: url('{% static 'images/airsoft-banner.jpg' %}');">
+        <div class="banner-overlay">
+            <h1>О нашем магазине</h1>
+            <p>Ваш надежный партнер в мире страйкбольного снаряжения с 2010 года</p>
+        </div>
     </div>
 
-    <div class="about-content">
+    <div class="about-content container">
         <section class="about-section">
-            <h2>Наша история</h2>
-            <p>Мы начали как небольшой клуб энтузиастов страйкбола в 2010 году. Со временем наша страсть переросла в профессиональный магазин, где мы собрали лучшие образцы оружия, брони и аксессуаров от ведущих мировых производителей.</p>
-            <p>Сегодня наш магазин - это не просто точка продаж, а настоящий хаб для страйкболистов, где вы можете не только приобрести качественное снаряжение, но и получить профессиональную консультацию.</p>
+            <h2 class="section-title">Наша история</h2>
+            <div class="history-content">
+                <img src="{% static 'images/airsoft-team.jpg' %}" alt="Наша команда на страйкбольном поле" class="history-image">
+                <div class="history-text">
+                    <p>Мы начали как небольшой клуб энтузиастов страйкбола в 2010 году. Наши основатели - ветераны спортивного страйкбола, участники множества турниров и организаторы крупных игр.</p>
+                    <p>Со временем наша страсть переросла в профессиональный магазин, где мы собрали лучшие образцы оружия (AEG, GBB, HPA системы), брони и тактического снаряжения от ведущих мировых производителей: Tokyo Marui, G&G Armament, Krytac, LCT и других.</p>
+                    <p>Сегодня наш магазин - это не просто точка продаж, а настоящий хаб для страйкболистов, где вы можете:</p>
+                    <ul class="features-list">
+                        <li>Приобрести качественное снаряжение и экипировку</li>
+                        <li>Получить профессиональную консультацию по выбору оружия</li>
+                        <li>Заказать индивидуальную настройку и апгрейд вашего оборудования</li>
+                        <li>Узнать о предстоящих играх и турнирах</li>
+                    </ul>
+                </div>
+            </div>
         </section>
 
-        <section class="about-section">
-            <h2>Наши принципы</h2>
+        <section class="about-section principles-section">
+            <h2 class="section-title">Наши принципы</h2>
             <div class="principles-grid">
                 <div class="principle-card">
-                    <h3>Качество</h3>
-                    <p>Мы тщательно тестируем все товары перед тем, как предложить их вам. Только проверенное снаряжение от надежных производителей.</p>
+                    <div class="principle-icon">
+                        <i class="fas fa-shield-alt"></i>
+                    </div>
+                    <h3>Качество и безопасность</h3>
+                    <p>Мы тщательно тестируем все товары перед продажей. Только проверенное снаряжение от надежных производителей, соответствующее стандартам безопасности.</p>
                 </div>
                 <div class="principle-card">
-                    <h3>Экспертиза</h3>
-                    <p>Наши консультанты - действующие спортсмены и опытные игроки, которые помогут подобрать оптимальное снаряжение под ваши задачи.</p>
+                    <div class="principle-icon">
+                        <i class="fas fa-trophy"></i>
+                    </div>
+                    <h3>Профессиональная экспертиза</h3>
+                    <p>Наши консультанты - действующие спортсмены и организаторы игр с опытом от 5 лет. Поможем подобрать снаряжение под ваш стиль игры и уровень подготовки.</p>
                 </div>
                 <div class="principle-card">
-                    <h3>Сервис</h3>
-                    <p>Гарантийное обслуживание, постпродажная поддержка и помощь в настройке оборудования - стандарты нашего сервиса.</p>
+                    <div class="principle-icon">
+                        <i class="fas fa-tools"></i>
+                    </div>
+                    <h3>Сервис и поддержка</h3>
+                    <p>Гарантийное обслуживание, ремонт, апгрейд и тонкая настройка оборудования. Проводим мастер-классы по уходу за техникой.</p>
                 </div>
             </div>
         </section>
 
         <section class="about-section team-section">
-            <h2>Наша команда</h2>
+            <h2 class="section-title">Наша команда</h2>
             <div class="team-grid">
                 {% for creator in creators %}
                 <div class="team-card">
+                    <div class="team-photo" style="background-image: url('{{ creator.photo.url }}');"></div>
                     <h3>{{ creator.name }}</h3>
-                    <p class="position">Производитель снаряжения</p>
+                    <p class="position">{{ creator.position }}</p>
+                    <div class="team-social">
+                        {% if creator.instagram %}<a href="{{ creator.instagram }}" target="_blank"><i class="fab fa-instagram"></i></a>{% endif %}
+                        {% if creator.vk %}<a href="{{ creator.vk }}" target="_blank"><i class="fab fa-vk"></i></a>{% endif %}
+                    </div>
                     <p class="bio">{{ creator.bio|truncatechars:150 }}</p>
+                    <p class="experience">Опыт в страйкболе: {{ creator.experience }} лет</p>
                 </div>
                 {% endfor %}
             </div>
         </section>
 
         <section class="about-section">
-            <h2>Контакты</h2>
+            <h2 class="section-title">Контакты и площадки</h2>
             <div class="contacts-grid">
                 <div class="contact-info">
-                    <h3>Адрес</h3>
-                    <p>г. Москва, ул. Страйкбольная, д. 7</p>
-                    <h3>Часы работы</h3>
+                    <h3><i class="fas fa-map-marker-alt"></i> Адрес магазина</h3>
+                    <p>г. Москва, ул. Страйкбольная, д. 7 (м. Тактическая)</p>
+                    
+                    <h3><i class="fas fa-clock"></i> Часы работы</h3>
                     <p>Пн-Пт: 10:00 - 20:00</p>
                     <p>Сб-Вс: 11:00 - 18:00</p>
+                    
+                    <h3><i class="fas fa-phone"></i> Телефон</h3>
+                    <p>+7 (495) 123-45-67</p>
+                    
+                    <h3><i class="fas fa-envelope"></i> Email</h3>
+                    <p>info@airsoft-pro.ru</p>
                 </div>
                 
+                <div class="contact-map">
+                    <iframe src="https://yandex.ru/map-widget/v1/?um=..." width="100%" height="400" frameborder="0" allowfullscreen></iframe>
+                </div>
+            </div>
+            
+            <div class="playing-fields">
+                <h3>Рекомендуемые площадки для игр:</h3>
+                <ul>
+                    <li>"Полигон" - лесной массив, 30 км от МКАД</li>
+                    <li>"Urban Zone" - заброшенный завод в черте города</li>
+                    <li>"Бункер" - закрытая площадка для CQB</li>
+                </ul>
             </div>
         </section>
     </div>
